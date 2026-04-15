@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Code Sentinel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            sentinel: {
+              bg:      '#0d1117',
+              surface: '#161b22',
+              border:  '#30363d',
+              accent:  '#58a6ff',
+              green:   '#3fb950',
+              red:     '#f85149',
+              yellow:  '#d29922',
+              purple:  '#bc8cff',
+              muted:   '#8b949e',
+            }
+          },
+          fontFamily: { mono: ['JetBrains Mono', 'Fira Code', 'monospace'] },
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #0d1117; color: #e6edf3; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #161b22; }
+    ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+    .tab-active  { border-bottom: 2px solid #58a6ff; color: #58a6ff; }
+    .tab-inactive{ border-bottom: 2px solid transparent; color: #8b949e; }
+    textarea { resize: vertical; }
+    .fade-in { animation: fadeIn .35s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:none } }
+    .pulse-dot { animation: pulseDot 1.2s ease-in-out infinite; }
+    @keyframes pulseDot { 0%,100% { opacity:1 } 50% { opacity:.3 } }
+    .code-block { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; line-height: 1.6; }
+    .step-card { transition: all .3s ease; }
+    .progress-bar { transition: width .6s ease; }
+    .badge { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:9999px; font-size:.72rem; font-weight:600; }
+  </style>
+</head>
+<body class="min-h-screen">
+
+<!-- ══════════════════════════════════════════════════════ NAV ══ -->
+<header class="border-b border-sentinel-border sticky top-0 z-30 bg-sentinel-bg/95 backdrop-blur">
+  <div class="max-w-screen-xl mx-auto flex items-center justify-between px-6 py-3">
+    <div class="flex items-center gap-3">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#58a6ff" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <path d="M9 12l2 2 4-4"/>
+      </svg>
+      <span class="font-bold text-lg tracking-tight">The Code Sentinel</span>
+      <span class="badge bg-sentinel-accent/10 text-sentinel-accent ml-1">DEMO</span>
+    </div>
+    <div class="flex items-center gap-4 text-sm text-sentinel-muted">
+      <a href="https://github.com/oolusina/DAIP_P4_prototype" target="_blank"
+         class="hover:text-white transition flex items-center gap-1.5">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.49.5.09.66-.22.66-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.56-1.11-4.56-4.95 0-1.09.39-1.98 1.03-2.68-.1-.26-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02A9.56 9.56 0 0112 6.8c.85 0 1.71.11 2.51.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.38.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.85-2.34 4.7-4.57 4.95.36.31.68.92.68 1.85v2.74c0 .27.16.58.67.48A10.01 10.01 0 0022 12c0-5.52-4.48-10-10-10z"/>
+        </svg>
+        Source
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- ════════════════════════════════════════════════ MAIN LAYOUT ══ -->
+<main class="max-w-screen-xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+
+  <!-- ───────────────────────── LEFT PANEL: Inputs ─────────────────────────── -->
+  <section class="space-y-5">
+    <div>
+      <h1 class="text-2xl font-bold">Upload Your Docs & Code</h1>
+      <p class="text-sentinel-muted text-sm mt-1">
+        Paste your PRD, technical spec, and source code below. The three-agent
+        pipeline will extract requirements, analyse code logic, and produce
+        runnable test stubs — automatically.
+      </p>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="flex gap-0 border-b border-sentinel-border text-sm font-medium" id="inputTabs">
+      <button data-tab="prd"         onclick="switchTab('prd')"         class="px-4 py-2 tab-active   transition">PRD</button>
+      <button data-tab="tech_spec"   onclick="switchTab('tech_spec')"   class="px-4 py-2 tab-inactive transition">Tech Spec</button>
+      <button data-tab="source_code" onclick="switchTab('source_code')" class="px-4 py-2 tab-inactive transition">Source Code</button>
+    </div>
+
+    <!-- Tab panels -->
+    <div id="panel-prd" class="space-y-2">
+      <div class="flex items-center justify-between">
+        <label class="text-xs text-sentinel-muted font-mono uppercase tracking-wider">Product Requirements Document</label>
+        <button onclick="loadExample('prd')" class="text-xs text-sentinel-accent hover:underline">Load example</button>
+      </div>
+      <textarea id="input-prd" rows="14"
+        placeholder="Paste your PRD here…&#10;&#10;e.g. Goals, non-goals, security requirements, latency targets…"
+        class="w-full bg-sentinel-surface border border-sentinel-border rounded-lg p-3 text-sm text-sentinel-muted focus:text-white focus:border-sentinel-accent focus:outline-none code-block transition"
+      ></textarea>
+    </div>
+
+    <div id="panel-tech_spec" class="space-y-2 hidden">
+      <div class="flex items-center justify-between">
+        <label class="text-xs text-sentinel-muted font-mono uppercase tracking-wider">Technical Specification</label>
+        <button onclick="loadExample('tech_spec')" class="text-xs text-sentinel-accent hover:underline">Load example</button>
+      </div>
+      <textarea id="input-tech_spec" rows="14"
+        placeholder="Paste your technical specification here…&#10;&#10;e.g. Stack, deployment target, auth mechanism, rate-limiting…"
+        class="w-full bg-sentinel-surface border border-sentinel-border rounded-lg p-3 text-sm text-sentinel-muted focus:text-white focus:border-sentinel-accent focus:outline-none code-block transition"
+      ></textarea>
+    </div>
+
+    <div id="panel-source_code" class="space-y-2 hidden">
+      <div class="flex items-center justify-between">
+        <label class="text-xs text-sentinel-muted font-mono uppercase tracking-wider">Source Code</label>
+        <button onclick="loadExample('source_code')" class="text-xs text-sentinel-accent hover:underline">Load example</button>
+      </div>
+      <textarea id="input-source_code" rows="14"
+        placeholder="Paste the source code to review here…"
+        class="w-full bg-sentinel-surface border border-sentinel-border rounded-lg p-3 text-sm text-sentinel-muted focus:text-white focus:border-sentinel-accent focus:outline-none code-block transition"
+      ></textarea>
+    </div>
+
+    <!-- File drop zone -->
+    <div id="dropZone"
+      class="border-2 border-dashed border-sentinel-border rounded-lg p-6 text-center text-sentinel-muted hover:border-sentinel-accent transition cursor-pointer text-sm"
+      onclick="document.getElementById('fileInput').click()"
+      ondragover="event.preventDefault(); this.classList.add('border-sentinel-accent')"
+      ondragleave="this.classList.remove('border-sentinel-accent')"
+      ondrop="handleFileDrop(event)">
+      <svg class="mx-auto mb-2 opacity-50" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+      </svg>
+      Drop files here or <span class="text-sentinel-accent">browse</span>
+      <p class="text-xs mt-1 opacity-60">.txt, .md, .py, .js, .ts, .go, .rs, .java files accepted</p>
+      <input id="fileInput" type="file" class="hidden" multiple accept=".txt,.md,.py,.js,.ts,.go,.rs,.java,.json,.yaml,.yml" onchange="handleFileSelect(event)" />
+    </div>
+
+    <!-- Action buttons -->
+    <div class="flex gap-3">
+      <button id="btnMock" onclick="runAnalysis(true)"
+        class="flex-1 bg-sentinel-surface border border-sentinel-border text-white font-semibold py-2.5 px-5 rounded-lg hover:border-sentinel-accent hover:text-sentinel-accent transition text-sm">
+        ▶ Run Demo (no API key)
+      </button>
+      <button id="btnReal" onclick="runAnalysis(false)"
+        class="flex-1 bg-sentinel-accent text-sentinel-bg font-semibold py-2.5 px-5 rounded-lg hover:bg-sentinel-accent/90 transition text-sm">
+        ▶ Run with GPT-4o
+      </button>
+    </div>
+  </section>
+
+  <!-- ───────────────────────── RIGHT PANEL: Results ───────────────────────── -->
+  <section class="space-y-5" id="resultsPanel">
+
+    <!-- Empty state -->
+    <div id="emptyState" class="flex flex-col items-center justify-center border border-dashed border-sentinel-border rounded-xl py-20 text-sentinel-muted">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" class="opacity-30 mb-4">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      <p class="text-sm">Run the pipeline to see results</p>
+    </div>
+
+    <!-- Live pipeline progress -->
+    <div id="pipelineProgress" class="hidden space-y-3">
+
+      <!-- Global progress bar -->
+      <div class="flex items-center justify-between text-xs text-sentinel-muted mb-1">
+        <span id="progressLabel">Initialising…</span>
+        <span id="progressPct">0%</span>
+      </div>
+      <div class="h-1.5 bg-sentinel-surface rounded-full overflow-hidden border border-sentinel-border">
+        <div id="progressBar" class="progress-bar h-full bg-sentinel-accent rounded-full" style="width:0%"></div>
+      </div>
+
+      <!-- Step cards -->
+      <div class="grid grid-cols-3 gap-3 mt-2">
+        <div id="step-1" class="step-card bg-sentinel-surface border border-sentinel-border rounded-xl p-4 text-center">
+          <div class="text-2xl mb-1">🗺️</div>
+          <div class="text-xs font-semibold text-white">Cartographer</div>
+          <div class="text-xs text-sentinel-muted mt-0.5">Context extraction</div>
+          <div id="step-1-status" class="mt-2 text-xs text-sentinel-muted">Waiting…</div>
+        </div>
+        <div id="step-2" class="step-card bg-sentinel-surface border border-sentinel-border rounded-xl p-4 text-center">
+          <div class="text-2xl mb-1">🔬</div>
+          <div class="text-xs font-semibold text-white">Translator</div>
+          <div class="text-xs text-sentinel-muted mt-0.5">Logic IR</div>
+          <div id="step-2-status" class="mt-2 text-xs text-sentinel-muted">Waiting…</div>
+        </div>
+        <div id="step-3" class="step-card bg-sentinel-surface border border-sentinel-border rounded-xl p-4 text-center">
+          <div class="text-2xl mb-1">⚔️</div>
+          <div class="text-xs font-semibold text-white">Auditor</div>
+          <div class="text-xs text-sentinel-muted mt-0.5">Adversarial eval</div>
+          <div id="step-3-status" class="mt-2 text-xs text-sentinel-muted">Waiting…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results tabs -->
+    <div id="resultsTabs" class="hidden">
+      <div class="flex gap-0 border-b border-sentinel-border text-sm font-medium" id="resultTabBar">
+        <button data-rtab="overview"    onclick="switchResultTab('overview')"    class="px-4 py-2 tab-active   transition">Overview</button>
+        <button data-rtab="schema"      onclick="switchResultTab('schema')"      class="px-4 py-2 tab-inactive transition">Schema</button>
+        <button data-rtab="logic"       onclick="switchResultTab('logic')"       class="px-4 py-2 tab-inactive transition">Logic IR</button>
+        <button data-rtab="tests"       onclick="switchResultTab('tests')"       class="px-4 py-2 tab-inactive transition">
+          Test Cases <span id="testBadge" class="ml-1 badge bg-sentinel-green/10 text-sentinel-green hidden">0</span>
+        </button>
+      </div>
+
+      <!-- ── Overview ── -->
+      <div id="rtab-overview" class="mt-4 space-y-4 fade-in">
+
+        <!-- Score card -->
+        <div id="scoreCard" class="bg-sentinel-surface border border-sentinel-border rounded-xl p-5 flex items-center gap-6">
+          <div class="relative w-20 h-20 flex-shrink-0">
+            <svg viewBox="0 0 36 36" class="w-20 h-20 -rotate-90">
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#30363d" stroke-width="3"/>
+              <circle id="scoreArc" cx="18" cy="18" r="15.9" fill="none"
+                stroke="#3fb950" stroke-width="3" stroke-linecap="round"
+                stroke-dasharray="0 100" style="transition: stroke-dasharray .8s ease, stroke .4s"/>
+            </svg>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <span id="scoreNum" class="text-xl font-bold text-white">–</span>
+            </div>
+          </div>
+          <div class="flex-1">
+            <div class="text-sm text-sentinel-muted mb-1">Compliance Score</div>
+            <div id="hardBlockBanner" class="hidden badge bg-sentinel-red/15 text-sentinel-red text-sm mb-2">
+              🚫 HARD BLOCK — deployment halted
+            </div>
+            <div id="summaryText" class="text-sm text-sentinel-muted leading-relaxed"></div>
+          </div>
+        </div>
+
+        <!-- Requirement status table -->
+        <div class="bg-sentinel-surface border border-sentinel-border rounded-xl overflow-hidden">
+          <div class="px-4 py-3 border-b border-sentinel-border text-xs font-semibold text-sentinel-muted uppercase tracking-wider">Requirement Status</div>
+          <table class="w-full text-sm" id="reqTable">
+            <tbody id="reqTableBody">
+              <tr><td class="px-4 py-6 text-center text-sentinel-muted text-xs" colspan="3">No data yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Tension report -->
+        <div class="bg-sentinel-surface border border-sentinel-border rounded-xl overflow-hidden">
+          <div class="px-4 py-3 border-b border-sentinel-border text-xs font-semibold text-sentinel-muted uppercase tracking-wider">Tension Report</div>
+          <div id="tensionList" class="divide-y divide-sentinel-border"></div>
+        </div>
+
+        <!-- Golden path -->
+        <div class="bg-sentinel-surface border border-sentinel-border rounded-xl overflow-hidden">
+          <div class="px-4 py-3 border-b border-sentinel-border text-xs font-semibold text-sentinel-muted uppercase tracking-wider">Golden Path</div>
+          <div id="goldenPath" class="px-4 py-4 text-sm text-white leading-relaxed whitespace-pre-wrap"></div>
+        </div>
+      </div>
+
+      <!-- ── Schema ── -->
+      <div id="rtab-schema" class="mt-4 space-y-4 hidden fade-in">
+        <!-- Constraints -->
+        <div class="bg-sentinel-surface border border-sentinel-border rounded-xl overflow-hidden">
+          <div class="px-4 py-3 border-b border-sentinel-border text-xs font-semibold text-sentinel-muted uppercase tracking-wider">Constraints</div>
+          <div id="constraintList" class="divide-y divide-sentinel-border"></div>
+        </div>
+        <!-- Goals -->
+        <div class="bg-sentinel-surface border border-sentinel-border rounded-xl overflow-hidden">
+          <div class="px-4 py-3 border-b border-sentinel-border text-xs font-semibold text-sentinel-muted uppercase tracking-wider">Product Goals</div>
+          <div id="goalList" class="divide-y divide-sentinel-border"></div>
+        </div>
+        <!-- Missing info -->
+        <div id="missingInfoCard" class="bg-sentinel-yellow/5 border border-sentinel-yellow/30 rounded-xl overflow-hidden hidden">
+          <div class="px-4 py-3 border-b border-sentinel-yellow/30 text-xs font-semibold text-sentinel-yellow uppercase tracking-wider">⚠ Missing Information</div>
+          <ul id="missingInfoList" class="px-4 py-3 space-y-1 text-sm text-sentinel-muted list-disc list-inside"></ul>
+        </div>
+      </div>
+
+      <!-- ── Logic IR ── -->
+      <div id="rtab-logic" class="mt-4 space-y-4 hidden fade-in">
+        <div class="bg-sentinel-surface border border-sentinel-border rounded-xl p-4 space-y-3">
+          <div>
+            <div class="text-xs text-sentinel-muted font-mono uppercase tracking-wider mb-1">Primary Intent</div>
+            <div id="primaryIntent" class="text-sm text-white"></div>
+          </div>
+          <div>
+            <div class="text-xs text-sentinel-muted font-mono uppercase tracking-wider mb-2">Execution Path</div>
+            <ol id="execPath" class="space-y-1 text-sm"></ol>
+          </div>
+        </div>
+        <!-- Entry / exit points -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-sentinel-surface border border-sentinel-border rounded-xl p-4">
+            <div class="text-xs text-sentinel-muted font-mono uppercase tracking-wider mb-2">Entry Points</div>
+            <ul id="entryPoints" class="space-y-1 text-sm text-sentinel-green"></ul>
+          </div>
+          <div class="bg-sentinel-surface border border-sentinel-border rounded-xl p-4">
+            <div class="text-xs text-sentinel-muted font-mono uppercase tracking-wider mb-2">Exit Points</div>
+            <ul id="exitPoints" class="space-y-1 text-sm text-sentinel-purple"></ul>
+          </div>
+        </div>
+        <!-- Vulnerabilities -->
+        <div class="bg-sentinel-red/5 border border-sentinel-red/30 rounded-xl overflow-hidden">
+          <div class="px-4 py-3 border-b border-sentinel-red/30 text-xs font-semibold text-sentinel-red uppercase tracking-wider">Data Vulnerabilities</div>
+          <ul id="vulnList" class="px-4 py-3 space-y-2 text-sm text-sentinel-muted"></ul>
+        </div>
+        <!-- Dependencies -->
+        <div class="bg-sentinel-surface border border-sentinel-border rounded-xl overflow-hidden">
+          <div class="px-4 py-3 border-b border-sentinel-border text-xs font-semibold text-sentinel-muted uppercase tracking-wider">Dependencies</div>
+          <ul id="depList" class="px-4 py-3 space-y-1.5 text-sm text-sentinel-muted"></ul>
+        </div>
+      </div>
+
+      <!-- ── Test Cases ── -->
+      <div id="rtab-tests" class="mt-4 space-y-4 hidden fade-in">
+
+        <!-- Toolbar -->
+        <div class="flex items-center gap-3 flex-wrap">
+          <div class="flex-1 min-w-40">
+            <input id="testSearch" type="text" placeholder="Filter tests…"
+              oninput="filterTests()"
+              class="w-full bg-sentinel-surface border border-sentinel-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-sentinel-accent text-white placeholder-sentinel-muted"
+            />
+          </div>
+          <div class="flex gap-2 text-xs">
+            <button onclick="filterCat('all')"         class="cat-btn px-3 py-1.5 rounded-lg bg-sentinel-accent/10 text-sentinel-accent border border-sentinel-accent/30 font-medium" data-cat="all">All</button>
+            <button onclick="filterCat('Security')"    class="cat-btn px-3 py-1.5 rounded-lg bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-accent transition" data-cat="Security">Security</button>
+            <button onclick="filterCat('Requirements')"class="cat-btn px-3 py-1.5 rounded-lg bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-accent transition" data-cat="Requirements">Requirements</button>
+            <button onclick="filterCat('Performance')" class="cat-btn px-3 py-1.5 rounded-lg bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-accent transition" data-cat="Performance">Performance</button>
+            <button onclick="filterCat('Integration')" class="cat-btn px-3 py-1.5 rounded-lg bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-accent transition" data-cat="Integration">Integration</button>
+          </div>
+          <button onclick="exportTests()"
+            class="text-xs px-3 py-1.5 rounded-lg bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-accent hover:text-white transition">
+            ↓ Export .py
+          </button>
+        </div>
+
+        <!-- Test case list -->
+        <div id="testList" class="space-y-3"></div>
+      </div>
+
+    </div><!-- /resultsTabs -->
+  </section>
+</main>
+
+<!-- ══════════════════════════════════════════════════ SCRIPTS ══ -->
+<script>
+// ─────────────────────────── State ────────────────────────────
+const state = {
+  prd: '', tech_spec: '', source_code: '',
+  truthSchema: null, logicTree: null, assessment: null,
+  testCases: [],
+  activeInputTab: 'prd',
+  activeResultTab: 'overview',
+  activeCategory: 'all',
+};
+
+// ─────────────────────────── Examples ─────────────────────────
+const EXAMPLES = {
+  prd: `Product: SecureNotes API v2\n\nGoals:\n- Allow authenticated users to create, read, and delete personal notes.\n- All note content must be encrypted at rest.\n- API response latency must be under 200ms at P95.\n- The system must support 10,000 concurrent users.\n\nNon-Goals:\n- Real-time collaboration features are out of scope for v2.\n\nSecurity:\n- All endpoints must enforce JWT authentication.\n- Passwords must be hashed with bcrypt (cost factor >= 12).\n- Raw user input must never be written to the database without sanitization.`,
+  tech_spec: `Stack: Python 3.11, Flask 3.x, PostgreSQL 15, Redis 7 (session cache).\nDeployment: Docker on AWS ECS Fargate, behind an ALB with TLS 1.3.\nAuth: JWT (HS256) with 15-minute access tokens; refresh tokens stored in Redis.\nEncryption: AES-256-GCM applied to note body before INSERT.\nRate limiting: 100 req/min per user enforced at ALB layer.`,
+  source_code: `from flask import Flask, request, jsonify\nimport sqlite3, hashlib, jwt, os\n\napp = Flask(__name__)\nSECRET = "hardcoded-secret-key"  # TODO: move to env var\n\ndef get_db():\n    return sqlite3.connect("notes.db")\n\n@app.route("/login", methods=["POST"])\ndef login():\n    data = request.get_json()\n    username = data["username"]\n    password = data["password"]\n    pw_hash = hashlib.md5(password.encode()).hexdigest()\n    conn = get_db()\n    row = conn.execute(\n        f"SELECT id FROM users WHERE username='{username}' AND pw_hash='{pw_hash}'"\n    ).fetchone()\n    if row:\n        token = jwt.encode({"user_id": row[0]}, SECRET, algorithm="HS256")\n        return jsonify({"token": token})\n    return jsonify({"error": "Unauthorized"}), 401\n\n@app.route("/notes", methods=["GET"])\ndef get_notes():\n    token = request.headers.get("Authorization", "").replace("Bearer ", "")\n    try:\n        payload = jwt.decode(token, SECRET, algorithms=["HS256"])\n    except Exception:\n        return jsonify({"error": "Invalid token"}), 401\n    conn = get_db()\n    rows = conn.execute(\n        f"SELECT id, body FROM notes WHERE user_id={payload['user_id']}"\n    ).fetchall()\n    return jsonify([{"id": r[0], "body": r[1]} for r in rows])\n\nif __name__ == "__main__":\n    app.run(debug=True)`,
+};
+
+function loadExample(tab) {
+  document.getElementById(`input-${tab}`).value = EXAMPLES[tab];
+  switchTab(tab);
+}
+
+// ─────────────────────────── Tab routing ─────────────────────
+function switchTab(tab) {
+  ['prd','tech_spec','source_code'].forEach(t => {
+    document.getElementById(`panel-${t}`).classList.toggle('hidden', t !== tab);
+    const btn = document.querySelector(`[data-tab="${t}"]`);
+    btn.className = `px-4 py-2 transition ${t === tab ? 'tab-active' : 'tab-inactive'}`;
+  });
+  state.activeInputTab = tab;
+}
+
+function switchResultTab(tab) {
+  ['overview','schema','logic','tests'].forEach(t => {
+    document.getElementById(`rtab-${t}`).classList.toggle('hidden', t !== tab);
+    const btn = document.querySelector(`[data-rtab="${t}"]`);
+    btn.className = `px-4 py-2 transition ${t === tab ? 'tab-active' : 'tab-inactive'}`;
+  });
+  state.activeResultTab = tab;
+}
+
+// ─────────────────────────── File handling ───────────────────
+function handleFileDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('border-sentinel-accent');
+  processFiles(e.dataTransfer.files);
+}
+function handleFileSelect(e) { processFiles(e.target.files); }
+function processFiles(files) {
+  for (const file of files) {
+    const reader = new FileReader();
+    const name = file.name.toLowerCase();
+    reader.onload = ev => {
+      const text = ev.target.result;
+      // Heuristic routing based on filename / extension
+      if (name.includes('prd') || name.includes('requirement') || name.endsWith('.md')) {
+        document.getElementById('input-prd').value = text;
+        switchTab('prd');
+      } else if (name.includes('spec') || name.includes('arch')) {
+        document.getElementById('input-tech_spec').value = text;
+        switchTab('tech_spec');
+      } else {
+        document.getElementById('input-source_code').value = text;
+        switchTab('source_code');
+      }
+    };
+    reader.readAsText(file);
+  }
+}
+
+// ─────────────────────────── Pipeline runner ─────────────────
+function setProgress(pct, label) {
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressPct').textContent = pct + '%';
+  document.getElementById('progressLabel').textContent = label;
+}
+
+function setStepStatus(step, status /* 'running'|'done'|'error' */) {
+  const el = document.getElementById(`step-${step}-status`);
+  const card = document.getElementById(`step-${step}`);
+  if (status === 'running') {
+    el.innerHTML = '<span class="pulse-dot text-sentinel-accent">● Running</span>';
+    card.classList.add('border-sentinel-accent/50');
+  } else if (status === 'done') {
+    el.innerHTML = '<span class="text-sentinel-green">✓ Done</span>';
+    card.classList.remove('border-sentinel-accent/50');
+    card.classList.add('border-sentinel-green/40');
+  } else {
+    el.innerHTML = '<span class="text-sentinel-red">✗ Error</span>';
+  }
+}
+
+async function runAnalysis(mock) {
+  // Collect inputs
+  const prd         = document.getElementById('input-prd').value.trim();
+  const tech_spec   = document.getElementById('input-tech_spec').value.trim();
+  const source_code = document.getElementById('input-source_code').value.trim();
+
+  if (!mock && !prd && !source_code) {
+    alert('Please paste a PRD and source code (or click "Load example") before running.');
+    return;
+  }
+
+  // Reset UI
+  document.getElementById('emptyState').classList.add('hidden');
+  document.getElementById('pipelineProgress').classList.remove('hidden');
+  document.getElementById('resultsTabs').classList.add('hidden');
+  ['1','2','3'].forEach(s => {
+    const el = document.getElementById(`step-${s}-status`);
+    el.textContent = 'Waiting…';
+    el.className = 'mt-2 text-xs text-sentinel-muted';
+    const card = document.getElementById(`step-${s}`);
+    card.className = 'step-card bg-sentinel-surface border border-sentinel-border rounded-xl p-4 text-center';
+  });
+  setProgress(0, 'Initialising pipeline…');
+
+  // Disable buttons
+  document.getElementById('btnMock').disabled = true;
+  document.getElementById('btnReal').disabled = true;
+
+  const url = mock ? '/api/analyze/mock' : '/api/analyze';
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prd, technical_spec: tech_spec, source_code }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json();
+      alert('Server error: ' + (err.error || resp.statusText));
+      return;
+    }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n\n');
+      buffer = lines.pop(); // keep incomplete chunk
+      for (const chunk of lines) {
+        const line = chunk.replace(/^data: /, '').trim();
+        if (!line) continue;
+        try { handleSSE(JSON.parse(line)); } catch {}
+      }
+    }
+  } catch (err) {
+    alert('Connection error: ' + err.message);
+  } finally {
+    document.getElementById('btnMock').disabled = false;
+    document.getElementById('btnReal').disabled = false;
+  }
+}
+
+// ─────────────────────────── SSE handler ─────────────────────
+function handleSSE(msg) {
+  const pct = { 1: 10, 2: 40, 3: 75 };
+  switch (msg.event) {
+    case 'step_start':
+      setProgress(pct[msg.step] || 0, msg.label);
+      setStepStatus(msg.step, 'running');
+      break;
+
+    case 'step_done':
+      setStepStatus(msg.step, 'done');
+      if (msg.agent === 'ContextCartographer') {
+        state.truthSchema = msg.payload;
+        renderSchema(msg.payload);
+      } else if (msg.agent === 'LogicTranslator') {
+        state.logicTree = msg.payload;
+        renderLogic(msg.payload);
+      } else if (msg.agent === 'AdversarialAuditor') {
+        state.assessment = msg.payload;
+        renderOverview(msg.payload);
+        setProgress(95, 'Generating test cases…');
+      }
+      break;
+
+    case 'test_cases':
+      state.testCases = msg.test_cases;
+      renderTests(msg.test_cases);
+      document.getElementById('testBadge').textContent = msg.test_cases.length;
+      document.getElementById('testBadge').classList.remove('hidden');
+      setProgress(100, 'Pipeline complete.');
+      document.getElementById('resultsTabs').classList.remove('hidden');
+      switchResultTab('overview');
+      break;
+
+    case 'error':
+      alert('Pipeline error: ' + msg.message);
+      break;
+
+    case 'done':
+      setProgress(100, 'Pipeline complete.');
+      break;
+  }
+}
+
+// ─────────────────────────── Renderers ───────────────────────
+
+function statusBadge(status) {
+  const map = {
+    Met:     'bg-sentinel-green/10 text-sentinel-green',
+    Failed:  'bg-sentinel-red/10 text-sentinel-red',
+    Partial: 'bg-sentinel-yellow/10 text-sentinel-yellow',
+  };
+  return `<span class="badge ${map[status] || 'bg-sentinel-surface text-sentinel-muted'}">${status}</span>`;
+}
+
+function severityBadge(sev) {
+  const map = {
+    critical: 'bg-red-900/30 text-red-400',
+    high:     'bg-orange-900/20 text-orange-400',
+    medium:   'bg-yellow-900/20 text-yellow-400',
+    low:      'bg-sentinel-surface text-sentinel-muted',
+  };
+  return `<span class="badge ${map[sev] || ''}">${sev}</span>`;
+}
+
+function catBadge(cat) {
+  const map = {
+    Security:     'bg-red-900/20 text-red-400',
+    Requirements: 'bg-blue-900/20 text-blue-400',
+    Performance:  'bg-purple-900/20 text-purple-300',
+    Integration:  'bg-teal-900/20 text-teal-400',
+  };
+  return `<span class="badge ${map[cat] || 'bg-sentinel-surface text-sentinel-muted'}">${cat}</span>`;
+}
+
+function renderOverview(a) {
+  // Score arc
+  const score = a.compliance_score ?? 0;
+  const arc = Math.round(score * 100) / 100;
+  const strokeColor = score >= 70 ? '#3fb950' : score >= 40 ? '#d29922' : '#f85149';
+  const arcEl = document.getElementById('scoreArc');
+  arcEl.style.stroke = strokeColor;
+  arcEl.setAttribute('stroke-dasharray', `${arc} 100`);
+  document.getElementById('scoreNum').textContent = score;
+
+  // Hard block
+  const hb = document.getElementById('hardBlockBanner');
+  a.hard_block ? hb.classList.remove('hidden') : hb.classList.add('hidden');
+
+  // Summary
+  document.getElementById('summaryText').textContent = a.summary || '–';
+
+  // Requirement table
+  const tbody = document.getElementById('reqTableBody');
+  if (a.requirement_status && a.requirement_status.length) {
+    tbody.innerHTML = a.requirement_status.map(r => `
+      <tr class="border-t border-sentinel-border hover:bg-white/[.02] transition">
+        <td class="px-4 py-2.5 font-mono text-xs text-sentinel-muted">${r.req_id}</td>
+        <td class="px-4 py-2.5">${statusBadge(r.status)}</td>
+        <td class="px-4 py-2.5 text-xs text-sentinel-muted">${esc(r.rationale)}</td>
+      </tr>`).join('');
+  }
+
+  // Tension report
+  const tl = document.getElementById('tensionList');
+  if (a.tension_report && a.tension_report.length) {
+    tl.innerHTML = a.tension_report.map(t => `
+      <div class="px-4 py-3 space-y-1">
+        <div class="text-sm font-medium text-white">${esc(t.description)}</div>
+        <div class="text-xs text-sentinel-muted">
+          <span class="text-sentinel-accent">Product:</span> ${esc(t.product_impact)}
+          &nbsp;·&nbsp;
+          <span class="text-sentinel-red">Safety:</span> ${esc(t.safety_impact)}
+        </div>
+      </div>`).join('');
+  } else {
+    tl.innerHTML = '<div class="px-4 py-4 text-sm text-sentinel-muted">No tensions identified.</div>';
+  }
+
+  // Golden path
+  document.getElementById('goldenPath').textContent = a.golden_path || '–';
+}
+
+function renderSchema(s) {
+  const cl = document.getElementById('constraintList');
+  cl.innerHTML = (s.constraints || []).map(c => `
+    <div class="px-4 py-3 flex items-start gap-3">
+      <span class="badge mt-0.5 ${c.type === 'hard' ? 'bg-sentinel-red/10 text-sentinel-red' : 'bg-sentinel-yellow/10 text-sentinel-yellow'}">${c.type}</span>
+      <div>
+        <div class="text-xs font-mono text-sentinel-muted">${c.id}</div>
+        <div class="text-sm text-white">${esc(c.description)}</div>
+        ${c.metric ? `<div class="text-xs text-sentinel-muted mt-0.5 font-mono">${esc(c.metric)}</div>` : ''}
+      </div>
+    </div>`).join('') || '<div class="px-4 py-4 text-sm text-sentinel-muted">None</div>';
+
+  const gl = document.getElementById('goalList');
+  gl.innerHTML = (s.product_goals || []).map(g => `
+    <div class="px-4 py-3 flex items-start gap-3">
+      <span class="badge mt-0.5 ${g.priority === 'P0' ? 'bg-sentinel-accent/10 text-sentinel-accent' : 'bg-sentinel-surface text-sentinel-muted border border-sentinel-border'}">${g.priority}</span>
+      <div>
+        <div class="text-xs font-mono text-sentinel-muted">${g.id}</div>
+        <div class="text-sm text-white">${esc(g.description)}</div>
+      </div>
+    </div>`).join('') || '<div class="px-4 py-4 text-sm text-sentinel-muted">None</div>';
+
+  const mi = s.missing_info || [];
+  if (mi.length) {
+    document.getElementById('missingInfoCard').classList.remove('hidden');
+    document.getElementById('missingInfoList').innerHTML = mi.map(m => `<li>${esc(m)}</li>`).join('');
+  }
+}
+
+function renderLogic(t) {
+  document.getElementById('primaryIntent').textContent = t.primary_intent || '–';
+
+  document.getElementById('execPath').innerHTML = (t.execution_path || [])
+    .map((s, i) => `<li class="flex gap-2">
+      <span class="flex-shrink-0 w-5 h-5 rounded-full bg-sentinel-accent/10 text-sentinel-accent text-xs flex items-center justify-center font-bold">${i+1}</span>
+      <span class="text-white">${esc(s)}</span>
+    </li>`).join('');
+
+  document.getElementById('entryPoints').innerHTML = (t.entry_points || [])
+    .map(p => `<li class="font-mono text-xs">→ ${esc(p)}</li>`).join('') || '<li class="text-sentinel-muted text-xs">None</li>';
+
+  document.getElementById('exitPoints').innerHTML = (t.exit_points || [])
+    .map(p => `<li class="font-mono text-xs">← ${esc(p)}</li>`).join('') || '<li class="text-sentinel-muted text-xs">None</li>';
+
+  document.getElementById('vulnList').innerHTML = (t.data_vulnerabilities || [])
+    .map(v => `<li class="flex gap-2"><span class="text-sentinel-red flex-shrink-0">⚠</span><span>${esc(v)}</span></li>`).join('')
+    || '<li class="text-sentinel-muted">No vulnerabilities detected.</li>';
+
+  document.getElementById('depList').innerHTML = (t.dependencies || [])
+    .map(d => `<li class="font-mono text-xs text-sentinel-muted">${esc(d)}</li>`).join('') || '<li class="text-sentinel-muted text-xs">None</li>';
+}
+
+function renderTests(cases) {
+  state.testCases = cases;
+  _renderFilteredTests();
+}
+
+function _renderFilteredTests() {
+  const search = (document.getElementById('testSearch')?.value || '').toLowerCase();
+  const cat    = state.activeCategory;
+
+  const filtered = state.testCases.filter(tc =>
+    (cat === 'all' || tc.category === cat) &&
+    (!search || tc.title.toLowerCase().includes(search) || tc.description.toLowerCase().includes(search) || tc.id.toLowerCase().includes(search))
+  );
+
+  const container = document.getElementById('testList');
+  if (!filtered.length) {
+    container.innerHTML = '<div class="text-center text-sentinel-muted text-sm py-10">No matching test cases.</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map((tc, i) => `
+    <div class="fade-in bg-sentinel-surface border border-sentinel-border rounded-xl overflow-hidden">
+      <div class="px-4 py-3 flex items-center justify-between gap-3 border-b border-sentinel-border">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="font-mono text-xs text-sentinel-muted flex-shrink-0">${tc.id}</span>
+          <span class="text-sm font-medium text-white truncate">${esc(tc.title)}</span>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          ${catBadge(tc.category)}
+          ${severityBadge(tc.severity)}
+          <button onclick="toggleStub(${i})" class="text-xs text-sentinel-accent hover:underline">Code ↓</button>
+        </div>
+      </div>
+      <div class="px-4 py-2.5 text-xs text-sentinel-muted">${esc(tc.description)}</div>
+      <div id="stub-${i}" class="hidden border-t border-sentinel-border">
+        <div class="flex items-center justify-between px-4 py-1.5 border-b border-sentinel-border bg-black/20">
+          <span class="text-xs text-sentinel-muted font-mono">pytest stub</span>
+          <button onclick="copyStub(${i})" class="text-xs text-sentinel-accent hover:underline">Copy</button>
+        </div>
+        <pre class="code-block px-4 py-3 text-sentinel-muted overflow-x-auto text-xs">${esc(tc.stub)}</pre>
+      </div>
+    </div>`).join('');
+}
+
+function toggleStub(i) {
+  const el = document.getElementById(`stub-${i}`);
+  el.classList.toggle('hidden');
+}
+
+function copyStub(i) {
+  const filtered = state.testCases.filter(tc =>
+    (state.activeCategory === 'all' || tc.category === state.activeCategory)
+  );
+  navigator.clipboard.writeText(filtered[i]?.stub || '');
+}
+
+function filterTests() { _renderFilteredTests(); }
+
+function filterCat(cat) {
+  state.activeCategory = cat;
+  document.querySelectorAll('.cat-btn').forEach(b => {
+    const active = b.dataset.cat === cat;
+    b.className = `cat-btn px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+      active
+        ? 'bg-sentinel-accent/10 text-sentinel-accent border border-sentinel-accent/30'
+        : 'bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-accent'
+    }`;
+  });
+  _renderFilteredTests();
+}
+
+function exportTests() {
+  const lines = [
+    '"""',
+    'Auto-generated test stubs — The Code Sentinel',
+    'Fill in the TODOs before running with pytest.',
+    '"""',
+    'import pytest',
+    '',
+    ...state.testCases.map(tc => tc.stub + '\n'),
+  ];
+  const blob = new Blob([lines.join('\n')], { type: 'text/x-python' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'sentinel_tests.py'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─────────────────────────── Util ────────────────────────────
+function esc(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

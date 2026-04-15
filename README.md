@@ -52,8 +52,12 @@ code_sentinel/
 ├── parsers.py       # XML/JSON extraction utilities
 ├── agents.py        # The three agent classes + system prompts
 └── pipeline.py      # CodeSentinelPipeline orchestrator
-main.py              # Example entry point with a deliberately insecure Flask app
+frontend/
+└── index.html       # Single-page demo UI (vanilla JS + Tailwind CDN)
+server.py            # Flask server — SSE streaming API + static file serving
+main.py              # CLI entry point with a deliberately insecure Flask app example
 requirements.txt
+.env.example
 ```
 
 ## Quickstart
@@ -64,22 +68,29 @@ requirements.txt
 pip install -r requirements.txt
 ```
 
-### 2. Set your API key
+### 2. Configure environment
 
 ```bash
-export OPENAI_API_KEY=sk-...
+cp .env.example .env
+# edit .env and add your OPENAI_API_KEY (optional — the demo mode works without one)
 ```
 
-Or create a `.env` file:
-
-```
-OPENAI_API_KEY=sk-...
-```
-
-### 3. Run the example
+### 3a. Launch the web demo UI
 
 ```bash
-python main.py
+python3 server.py
+# → http://localhost:5000
+```
+
+- Click **"Run Demo (no API key)"** for an instant demo with realistic mock data.
+- Click **"Run with GPT-4o"** to run the real pipeline (requires `OPENAI_API_KEY`).
+- Drag-and-drop `.py`, `.md`, `.txt`, `.go`, `.rs` files or paste text directly.
+- The **Test Cases** tab generates downloadable `pytest` stubs, filtered by category (Security / Requirements / Performance / Integration).
+
+### 3b. Run the CLI example
+
+```bash
+python3 main.py
 ```
 
 The example ships with a deliberately insecure Flask app (SQL injection, MD5 passwords, hardcoded secrets) so you can see the Adversarial Auditor trigger a **HARD BLOCK** out of the box.
