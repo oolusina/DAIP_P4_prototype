@@ -632,22 +632,15 @@
             </button>
           </div>
 
-          <!-- Toolbar row 2: category + status filters -->
+          <!-- Toolbar row 2: status filters only -->
           <div class="flex items-center gap-2 flex-wrap text-xs">
-            <span class="text-sentinel-muted mr-1">Category:</span>
-            <button onclick="filterCat('all')"          class="cat-btn px-2.5 py-1 rounded-md bg-sentinel-accent/10 text-sentinel-accent border border-sentinel-accent/30 font-medium" data-cat="all">All</button>
-            <button onclick="filterCat('Security')"     class="cat-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-red-500/40 hover:text-red-400 transition" data-cat="Security">Security</button>
-            <button onclick="filterCat('Requirements')" class="cat-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-blue-500/40 hover:text-blue-400 transition" data-cat="Requirements">Requirements</button>
-            <button onclick="filterCat('Performance')"  class="cat-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-purple-400/40 hover:text-purple-300 transition" data-cat="Performance">Performance</button>
-            <button onclick="filterCat('Integration')"  class="cat-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-teal-400/40 hover:text-teal-400 transition" data-cat="Integration">Integration</button>
-            <span class="text-sentinel-border mx-1">|</span>
             <span class="text-sentinel-muted mr-1">Status:</span>
             <button onclick="filterStatus('all')"         class="st-btn px-2.5 py-1 rounded-md bg-sentinel-accent/10 text-sentinel-accent border border-sentinel-accent/30 font-medium" data-st="all">All</button>
-            <button onclick="filterStatus('pending')"     class="st-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-accent transition" data-st="pending">Pending</button>
-            <button onclick="filterStatus('in_progress')" class="st-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-yellow transition" data-st="in_progress">In Progress</button>
-            <button onclick="filterStatus('passed')"      class="st-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-green transition" data-st="passed">Passed</button>
-            <button onclick="filterStatus('failed')"      class="st-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-red transition" data-st="failed">Failed</button>
-            <button onclick="filterStatus('blocked')"     class="st-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-orange-400/50 transition" data-st="blocked">Blocked</button>
+            <button onclick="filterStatus('pending')"     class="st-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-muted/60 transition" data-st="pending">Pending</button>
+            <button onclick="filterStatus('in_progress')" class="st-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-yellow/60 hover:text-sentinel-yellow transition" data-st="in_progress">In Progress</button>
+            <button onclick="filterStatus('passed')"      class="st-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-green/60 hover:text-sentinel-green transition" data-st="passed">Passed</button>
+            <button onclick="filterStatus('failed')"      class="st-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-red/60 hover:text-sentinel-red transition" data-st="failed">Failed</button>
+            <button onclick="filterStatus('blocked')"     class="st-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-orange-400/50 hover:text-orange-400 transition" data-st="blocked">Blocked</button>
           </div>
 
           <!-- Stats bar -->
@@ -677,7 +670,6 @@ const appState = {
   // workspace
   activeInputTab: 'prd',
   activeResultTab: 'overview',
-  activeCategory: 'all',
   truthSchema: null, logicTree: null, assessment: null,
   testCases: [],
 };
@@ -1135,10 +1127,6 @@ function severityBadge(s) {
   const m = { critical:'bg-red-900/30 text-red-400', high:'bg-orange-900/20 text-orange-400', medium:'bg-yellow-900/20 text-yellow-400', low:'bg-sentinel-surface text-sentinel-muted' };
   return `<span class="badge ${m[s]||''}">${s}</span>`;
 }
-function catBadge(c) {
-  const m = { Security:'bg-red-900/20 text-red-400', Requirements:'bg-blue-900/20 text-blue-400', Performance:'bg-purple-900/20 text-purple-300', Integration:'bg-teal-900/20 text-teal-400' };
-  return `<span class="badge ${m[c]||''}">${c}</span>`;
-}
 
 function renderOverview(a) {
   const score = a.compliance_score ?? 0;
@@ -1259,11 +1247,9 @@ function renderTestStatsBar() {
 
 function _renderFilteredTests() {
   const search  = (document.getElementById('testSearch')?.value||'').toLowerCase();
-  const cat     = appState.activeCategory;
   const stFilter= appState.activeStatusFilter;
   const filtered= appState.testCases.filter(tc =>
-    (cat    ==='all' || tc.category === cat) &&
-    (stFilter==='all' || tc.status   === stFilter) &&
+    (stFilter==='all' || tc.status === stFilter) &&
     (!search || tc.title.toLowerCase().includes(search) ||
                tc.description.toLowerCase().includes(search) ||
                tc.id.toLowerCase().includes(search))
@@ -1292,7 +1278,6 @@ function renderTestCard(tc) {
       <div class="flex-1 min-w-0 space-y-1.5">
         <div class="flex items-center gap-2 flex-wrap">
           <span class="font-mono text-xs text-sentinel-muted flex-shrink-0">${tc.id}</span>
-          ${catBadge(tc.category)}
           ${severityBadge(tc.severity)}
           ${statusPill(tc.status)}
           ${linkedReqs}
@@ -1650,16 +1635,6 @@ async function postComment(tcId) {
 // ── Filter controls ──────────────────────────────────────────────────────
 function filterTests() { _renderFilteredTests(); }
 
-function filterCat(cat) {
-  appState.activeCategory = cat;
-  document.querySelectorAll('.cat-btn').forEach(b => {
-    const on = b.dataset.cat === cat;
-    b.className = `cat-btn px-2.5 py-1 rounded-md text-xs font-medium transition ${
-      on ? 'bg-sentinel-accent/10 text-sentinel-accent border border-sentinel-accent/30'
-         : 'bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-accent'}`;
-  });
-  _renderFilteredTests();
-}
 
 function filterStatus(st) {
   appState.activeStatusFilter = st;
@@ -1682,7 +1657,7 @@ function exportTests() {
     'import pytest',
     '',
     ...appState.testCases.map(tc => {
-      const header = `# ${tc.id} | ${tc.category} | ${tc.severity} | ${tc.status}`;
+      const header = `# ${tc.id} | severity: ${tc.severity} | status: ${tc.status}`;
       const crit   = (tc.acceptance_criteria||[]).map(c => `#   - ${c}`).join('\n');
       return `${header}\n# Acceptance criteria:\n${crit}\n${tc.stub}\n`;
     }),

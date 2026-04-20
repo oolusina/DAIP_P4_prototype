@@ -68,7 +68,7 @@ def _derive_test_cases(
     Each test case carries:
       id                  — stable identifier
       title               — human-readable name
-      category            — Requirements | Security | Performance | Integration
+      category            — internal only, not surfaced in the UI
       severity            — critical | high | medium | low
       description         — what to verify
       stub                — auto-generated pytest stub
