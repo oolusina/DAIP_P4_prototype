@@ -81,6 +81,11 @@
     /* ── File chip ── */
     .file-chip { animation: chipIn .2s ease forwards; }
     @keyframes chipIn { from { opacity:0; scale:.92 } to { opacity:1; scale:1 } }
+
+    /* ── Test cards ── */
+    .line-clamp-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .tc-panel textarea { min-height: 160px; }
+    .tc-tab { transition: color .15s, border-color .15s; }
   </style>
 </head>
 <body>
@@ -608,27 +613,47 @@
           </div>
         </div>
 
-        <!-- Test Cases -->
+        <!-- Test Cases — interactive engineering suite -->
         <div id="rtab-tests" class="mt-4 space-y-4 hidden fade-in">
-          <div class="flex items-center gap-3 flex-wrap">
-            <div class="flex-1 min-w-40">
-              <input id="testSearch" type="text" placeholder="Filter tests…"
+
+          <!-- Toolbar row 1: search + export -->
+          <div class="flex items-center gap-3">
+            <div class="relative flex-1">
+              <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-sentinel-muted" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input id="testSearch" type="text" placeholder="Search test cases…"
                 oninput="filterTests()"
-                class="w-full bg-sentinel-surface border border-sentinel-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-sentinel-accent text-white placeholder-sentinel-muted"
+                class="w-full bg-sentinel-surface border border-sentinel-border rounded-lg pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:border-sentinel-accent text-white placeholder-sentinel-muted"
               />
             </div>
-            <div class="flex gap-2 text-xs">
-              <button onclick="filterCat('all')"          class="cat-btn px-3 py-1.5 rounded-lg bg-sentinel-accent/10 text-sentinel-accent border border-sentinel-accent/30 font-medium" data-cat="all">All</button>
-              <button onclick="filterCat('Security')"     class="cat-btn px-3 py-1.5 rounded-lg bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-accent transition" data-cat="Security">Security</button>
-              <button onclick="filterCat('Requirements')" class="cat-btn px-3 py-1.5 rounded-lg bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-accent transition" data-cat="Requirements">Requirements</button>
-              <button onclick="filterCat('Performance')"  class="cat-btn px-3 py-1.5 rounded-lg bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-accent transition" data-cat="Performance">Performance</button>
-              <button onclick="filterCat('Integration')"  class="cat-btn px-3 py-1.5 rounded-lg bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-accent transition" data-cat="Integration">Integration</button>
-            </div>
-            <button onclick="exportTests()"
-              class="text-xs px-3 py-1.5 rounded-lg bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-accent hover:text-white transition">
-              ↓ Export .py
+            <button onclick="exportTests()" title="Export all stubs as .py"
+              class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-accent hover:text-white transition">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+              Export .py
             </button>
           </div>
+
+          <!-- Toolbar row 2: category + status filters -->
+          <div class="flex items-center gap-2 flex-wrap text-xs">
+            <span class="text-sentinel-muted mr-1">Category:</span>
+            <button onclick="filterCat('all')"          class="cat-btn px-2.5 py-1 rounded-md bg-sentinel-accent/10 text-sentinel-accent border border-sentinel-accent/30 font-medium" data-cat="all">All</button>
+            <button onclick="filterCat('Security')"     class="cat-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-red-500/40 hover:text-red-400 transition" data-cat="Security">Security</button>
+            <button onclick="filterCat('Requirements')" class="cat-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-blue-500/40 hover:text-blue-400 transition" data-cat="Requirements">Requirements</button>
+            <button onclick="filterCat('Performance')"  class="cat-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-purple-400/40 hover:text-purple-300 transition" data-cat="Performance">Performance</button>
+            <button onclick="filterCat('Integration')"  class="cat-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-teal-400/40 hover:text-teal-400 transition" data-cat="Integration">Integration</button>
+            <span class="text-sentinel-border mx-1">|</span>
+            <span class="text-sentinel-muted mr-1">Status:</span>
+            <button onclick="filterStatus('all')"         class="st-btn px-2.5 py-1 rounded-md bg-sentinel-accent/10 text-sentinel-accent border border-sentinel-accent/30 font-medium" data-st="all">All</button>
+            <button onclick="filterStatus('pending')"     class="st-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-accent transition" data-st="pending">Pending</button>
+            <button onclick="filterStatus('in_progress')" class="st-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-yellow transition" data-st="in_progress">In Progress</button>
+            <button onclick="filterStatus('passed')"      class="st-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-green transition" data-st="passed">Passed</button>
+            <button onclick="filterStatus('failed')"      class="st-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-red transition" data-st="failed">Failed</button>
+            <button onclick="filterStatus('blocked')"     class="st-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-orange-400/50 transition" data-st="blocked">Blocked</button>
+          </div>
+
+          <!-- Stats bar -->
+          <div id="testStatsBar" class="grid grid-cols-5 gap-2 text-center text-xs"></div>
+
+          <!-- Test case list -->
           <div id="testList" class="space-y-3"></div>
         </div>
       </div>
@@ -1188,58 +1213,480 @@ function renderLogic(t) {
   document.getElementById('depList').innerHTML      = (t.dependencies||[]).map(d=>`<li class="font-mono text-xs text-sentinel-muted">${esc(d)}</li>`).join('') || '<li class="text-sentinel-muted text-xs">None</li>';
 }
 
+// ═══════════════════════════════════════════ TESTS TAB ═══════════════════
+
+// ── Status helpers ───────────────────────────────────────────────────────
+const STATUS_META = {
+  pending:     { label:'Pending',     color:'text-sentinel-muted',  bg:'bg-sentinel-surface',     border:'border-sentinel-border',      dot:'#8b949e' },
+  in_progress: { label:'In Progress', color:'text-sentinel-yellow', bg:'bg-sentinel-yellow/5',    border:'border-sentinel-yellow/30',   dot:'#d29922' },
+  passed:      { label:'Passed',      color:'text-sentinel-green',  bg:'bg-sentinel-green/5',     border:'border-sentinel-green/30',    dot:'#3fb950' },
+  failed:      { label:'Failed',      color:'text-sentinel-red',    bg:'bg-sentinel-red/5',       border:'border-sentinel-red/30',      dot:'#f85149' },
+  blocked:     { label:'Blocked',     color:'text-orange-400',      bg:'bg-orange-900/10',        border:'border-orange-400/30',        dot:'#fb923c' },
+};
+function statusPill(st) {
+  const m = STATUS_META[st] || STATUS_META.pending;
+  return `<span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full border ${m.bg} ${m.border} ${m.color}">
+    <span class="w-1.5 h-1.5 rounded-full inline-block flex-shrink-0" style="background:${m.dot}"></span>${m.label}
+  </span>`;
+}
+
+// ── Filter state ─────────────────────────────────────────────────────────
+appState.activeStatusFilter = 'all';
+
 function renderTests(cases) {
   appState.testCases = cases;
+  renderTestStatsBar();
   _renderFilteredTests();
 }
 
+function renderTestStatsBar() {
+  const counts = { pending:0, in_progress:0, passed:0, failed:0, blocked:0 };
+  appState.testCases.forEach(tc => { if (counts[tc.status] !== undefined) counts[tc.status]++; });
+  const total = appState.testCases.length;
+  const items = [
+    { label:'Total',       val: total,                   color:'text-white' },
+    { label:'Pending',     val: counts.pending,          color:'text-sentinel-muted' },
+    { label:'In Progress', val: counts.in_progress,      color:'text-sentinel-yellow' },
+    { label:'Passed',      val: counts.passed,           color:'text-sentinel-green' },
+    { label:'Failed',      val: counts.failed + counts.blocked, color:'text-sentinel-red' },
+  ];
+  document.getElementById('testStatsBar').innerHTML = items.map(it => `
+    <div class="bg-sentinel-surface border border-sentinel-border rounded-lg py-2">
+      <div class="text-lg font-bold ${it.color}">${it.val}</div>
+      <div class="text-sentinel-muted text-xs mt-0.5">${it.label}</div>
+    </div>`).join('');
+}
+
 function _renderFilteredTests() {
-  const search   = (document.getElementById('testSearch')?.value||'').toLowerCase();
-  const cat      = appState.activeCategory;
-  const filtered = appState.testCases.filter(tc =>
-    (cat==='all' || tc.category===cat) &&
-    (!search || tc.title.toLowerCase().includes(search) || tc.description.toLowerCase().includes(search) || tc.id.toLowerCase().includes(search))
+  const search  = (document.getElementById('testSearch')?.value||'').toLowerCase();
+  const cat     = appState.activeCategory;
+  const stFilter= appState.activeStatusFilter;
+  const filtered= appState.testCases.filter(tc =>
+    (cat    ==='all' || tc.category === cat) &&
+    (stFilter==='all' || tc.status   === stFilter) &&
+    (!search || tc.title.toLowerCase().includes(search) ||
+               tc.description.toLowerCase().includes(search) ||
+               tc.id.toLowerCase().includes(search))
   );
   const container = document.getElementById('testList');
-  if (!filtered.length) { container.innerHTML = '<div class="text-center text-sentinel-muted text-sm py-10">No matching test cases.</div>'; return; }
-  container.innerHTML = filtered.map((tc,i) => `
-    <div class="fade-in bg-sentinel-surface border border-sentinel-border rounded-xl overflow-hidden">
-      <div class="px-4 py-3 flex items-center justify-between gap-3 border-b border-sentinel-border">
-        <div class="flex items-center gap-2 min-w-0">
+  if (!filtered.length) {
+    container.innerHTML = '<div class="text-center text-sentinel-muted text-sm py-10">No matching test cases.</div>';
+    return;
+  }
+  container.innerHTML = filtered.map(tc => renderTestCard(tc)).join('');
+}
+
+function renderTestCard(tc) {
+  const isExpanded = appState.expandedTests?.has(tc.id);
+  const commentCount = (tc.comments||[]).length;
+  const linkedReqs = (tc.linked_reqs||[]).map(r =>
+    `<span class="font-mono text-xs bg-sentinel-accent/10 text-sentinel-accent px-1.5 py-0.5 rounded">${esc(r)}</span>`
+  ).join('');
+
+  return `
+  <div id="tc-card-${tc.id}" class="fade-in bg-sentinel-surface border border-sentinel-border rounded-xl overflow-hidden transition-all">
+
+    <!-- ── Header ── -->
+    <div class="px-4 py-3 flex items-start gap-3 cursor-pointer hover:bg-white/[.015] transition"
+         onclick="toggleCard('${tc.id}')">
+      <div class="flex-1 min-w-0 space-y-1.5">
+        <div class="flex items-center gap-2 flex-wrap">
           <span class="font-mono text-xs text-sentinel-muted flex-shrink-0">${tc.id}</span>
-          <span class="text-sm font-medium text-white truncate">${esc(tc.title)}</span>
+          ${catBadge(tc.category)}
+          ${severityBadge(tc.severity)}
+          ${statusPill(tc.status)}
+          ${linkedReqs}
         </div>
-        <div class="flex items-center gap-2 flex-shrink-0">
-          ${catBadge(tc.category)} ${severityBadge(tc.severity)}
-          <button onclick="toggleStub(${i})" class="text-xs text-sentinel-accent hover:underline">Code ↓</button>
+        <div class="text-sm font-semibold text-white">${esc(tc.title)}</div>
+        <div class="text-xs text-sentinel-muted leading-relaxed line-clamp-2">${esc(tc.description)}</div>
+      </div>
+      <div class="flex items-center gap-3 flex-shrink-0 mt-0.5">
+        ${commentCount ? `<span class="flex items-center gap-1 text-xs text-sentinel-muted"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>${commentCount}</span>` : ''}
+        <svg class="text-sentinel-muted transition-transform ${isExpanded ? 'rotate-180' : ''}" id="chevron-${tc.id}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+    </div>
+
+    <!-- ── Expanded body ── -->
+    <div id="tc-body-${tc.id}" class="${isExpanded ? '' : 'hidden'} border-t border-sentinel-border">
+
+      <!-- Sub-tabs -->
+      <div class="flex border-b border-sentinel-border text-xs font-medium bg-black/10">
+        <button onclick="switchTcTab('${tc.id}','stub')"    class="tc-tab px-4 py-2 border-b-2 border-sentinel-accent text-sentinel-accent" data-tc="${tc.id}" data-tab="stub">Test Stub</button>
+        <button onclick="switchTcTab('${tc.id}','fix')"     class="tc-tab px-4 py-2 border-b-2 border-transparent text-sentinel-muted hover:text-white transition" data-tc="${tc.id}" data-tab="fix">Code Fix</button>
+        <button onclick="switchTcTab('${tc.id}','criteria')"class="tc-tab px-4 py-2 border-b-2 border-transparent text-sentinel-muted hover:text-white transition" data-tc="${tc.id}" data-tab="criteria">Acceptance</button>
+        <button onclick="switchTcTab('${tc.id}','thread')"  class="tc-tab px-4 py-2 border-b-2 border-transparent text-sentinel-muted hover:text-white transition" data-tc="${tc.id}" data-tab="thread">
+          Discussion ${commentCount ? `<span class="ml-1 badge bg-sentinel-accent/10 text-sentinel-accent">${commentCount}</span>` : ''}
+        </button>
+        <button onclick="switchTcTab('${tc.id}','history')" class="tc-tab px-4 py-2 border-b-2 border-transparent text-sentinel-muted hover:text-white transition" data-tc="${tc.id}" data-tab="history">History</button>
+      </div>
+
+      <!-- ── Tab: Test Stub ── -->
+      <div id="tc-${tc.id}-stub" class="tc-panel">
+        <div class="flex items-center justify-between px-4 py-2 border-b border-sentinel-border bg-black/10">
+          <span class="text-xs text-sentinel-muted font-mono">pytest stub — edit &amp; save</span>
+          <div class="flex items-center gap-2">
+            <button onclick="copyCode('${tc.id}','stub')" class="text-xs text-sentinel-muted hover:text-white transition">Copy</button>
+            <button onclick="saveCode('${tc.id}','stub')" class="text-xs px-2.5 py-1 rounded bg-sentinel-accent/10 text-sentinel-accent border border-sentinel-accent/20 hover:bg-sentinel-accent/20 transition">Save</button>
+          </div>
+        </div>
+        <textarea id="tc-${tc.id}-stub-editor"
+          class="code-block w-full bg-transparent px-4 py-3 text-xs text-sentinel-muted focus:text-white focus:outline-none resize-none"
+          rows="10"
+          spellcheck="false"
+          onkeydown="handleEditorTab(event)"
+        >${esc(tc.stub)}</textarea>
+        <div id="tc-${tc.id}-stub-saved" class="hidden px-4 pb-2 text-xs text-sentinel-green">✓ Saved</div>
+      </div>
+
+      <!-- ── Tab: Code Fix ── -->
+      <div id="tc-${tc.id}-fix" class="tc-panel hidden">
+        <div class="px-4 py-3 border-b border-sentinel-border bg-black/10 flex items-center justify-between">
+          <span class="text-xs font-semibold text-sentinel-muted uppercase tracking-wider">AI-generated code recommendation</span>
+          <div class="flex items-center gap-2">
+            <button onclick="copyCode('${tc.id}','code_recommendation')" class="text-xs text-sentinel-muted hover:text-white transition">Copy</button>
+            <button onclick="saveCode('${tc.id}','code_recommendation')" class="text-xs px-2.5 py-1 rounded bg-sentinel-accent/10 text-sentinel-accent border border-sentinel-accent/20 hover:bg-sentinel-accent/20 transition">Save edits</button>
+          </div>
+        </div>
+        <textarea id="tc-${tc.id}-fix-editor"
+          class="code-block w-full bg-transparent px-4 py-3 text-xs text-sentinel-green focus:outline-none resize-none"
+          rows="10"
+          spellcheck="false"
+          onkeydown="handleEditorTab(event)"
+        >${esc(tc.code_recommendation||'# No recommendation available')}</textarea>
+        <div id="tc-${tc.id}-fix-saved" class="hidden px-4 pb-2 text-xs text-sentinel-green">✓ Saved</div>
+      </div>
+
+      <!-- ── Tab: Acceptance Criteria ── -->
+      <div id="tc-${tc.id}-criteria" class="tc-panel hidden px-4 py-4 space-y-2">
+        <div class="text-xs text-sentinel-muted font-semibold uppercase tracking-wider mb-3">Definition of Done</div>
+        ${(tc.acceptance_criteria||[]).map((c,i) => `
+          <label class="flex items-start gap-3 cursor-pointer group">
+            <input type="checkbox" id="crit-${tc.id}-${i}"
+              class="mt-0.5 w-4 h-4 rounded accent-sentinel-green cursor-pointer"
+              onchange="toggleCriteria('${tc.id}',${i},this.checked)"
+              ${(appState.criteriaChecked?.[tc.id]?.[i]) ? 'checked' : ''}
+            />
+            <span class="text-sm text-sentinel-muted group-hover:text-white transition leading-snug">${esc(c)}</span>
+          </label>`).join('')}
+        <div id="crit-progress-${tc.id}" class="mt-3 text-xs text-sentinel-muted"></div>
+      </div>
+
+      <!-- ── Tab: Discussion ── -->
+      <div id="tc-${tc.id}-thread" class="tc-panel hidden">
+        <div class="px-4 py-3 space-y-3 max-h-56 overflow-y-auto" id="tc-${tc.id}-comments">
+          ${renderComments(tc)}
+        </div>
+        <div class="border-t border-sentinel-border px-4 py-3 space-y-2">
+          <div class="flex gap-2">
+            <input id="tc-${tc.id}-author" type="text" placeholder="Your name"
+              value="${esc(appState.engineerName||'')}"
+              oninput="appState.engineerName=this.value"
+              class="w-28 bg-sentinel-surface border border-sentinel-border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-sentinel-accent text-white placeholder-sentinel-muted flex-shrink-0"
+            />
+            <textarea id="tc-${tc.id}-comment-input" rows="2" placeholder="Leave a note, question, or code snippet…"
+              class="flex-1 bg-sentinel-surface border border-sentinel-border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-sentinel-accent text-white placeholder-sentinel-muted resize-none"
+              onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey))postComment('${tc.id}')"
+            ></textarea>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-sentinel-muted">⌘↵ to send</span>
+            <button onclick="postComment('${tc.id}')" class="text-xs px-3 py-1 rounded bg-sentinel-accent text-sentinel-bg font-semibold hover:bg-sentinel-accent/90 transition">Post</button>
+          </div>
         </div>
       </div>
-      <div class="px-4 py-2.5 text-xs text-sentinel-muted">${esc(tc.description)}</div>
-      <div id="stub-${i}" class="hidden border-t border-sentinel-border">
-        <div class="flex items-center justify-between px-4 py-1.5 border-b border-sentinel-border bg-black/20">
-          <span class="text-xs text-sentinel-muted font-mono">pytest stub</span>
-          <button onclick="copyStub(${i})" class="text-xs text-sentinel-accent hover:underline">Copy</button>
+
+      <!-- ── Tab: History ── -->
+      <div id="tc-${tc.id}-history" class="tc-panel hidden px-4 py-3 space-y-2 max-h-48 overflow-y-auto">
+        ${renderHistory(tc)}
+      </div>
+
+      <!-- ── Footer: status + assignee controls ── -->
+      <div class="border-t border-sentinel-border px-4 py-3 flex items-center gap-3 bg-black/10 flex-wrap">
+        <div class="flex items-center gap-2 flex-1 min-w-0">
+          <span class="text-xs text-sentinel-muted flex-shrink-0">Status:</span>
+          <select onchange="updateStatus('${tc.id}', this.value)"
+            class="bg-sentinel-surface border border-sentinel-border rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-sentinel-accent cursor-pointer">
+            ${Object.entries(STATUS_META).map(([k,v]) =>
+              `<option value="${k}" ${tc.status===k?'selected':''}>${v.label}</option>`
+            ).join('')}
+          </select>
         </div>
-        <pre class="code-block px-4 py-3 text-sentinel-muted overflow-x-auto text-xs">${esc(tc.stub)}</pre>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-sentinel-muted flex-shrink-0">Assign:</span>
+          <input type="text" value="${esc(tc.assignee||'')}" placeholder="Engineer name"
+            onchange="updateAssignee('${tc.id}', this.value)"
+            class="w-32 bg-sentinel-surface border border-sentinel-border rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-sentinel-accent placeholder-sentinel-muted"
+          />
+        </div>
+        <div class="text-xs text-sentinel-muted ml-auto">Updated ${tc.updated_at ? tc.updated_at.replace('T',' ').replace('Z','') : '—'}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderComments(tc) {
+  const comments = tc.comments || [];
+  if (!comments.length) return '<div class="text-xs text-sentinel-muted py-2">No comments yet.</div>';
+  return comments.map(c => `
+    <div class="flex gap-2.5 fade-in">
+      <div class="w-7 h-7 rounded-full bg-sentinel-accent/15 border border-sentinel-accent/20 flex items-center justify-center text-xs font-bold text-sentinel-accent flex-shrink-0 uppercase">
+        ${(c.author||'?')[0]}
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 mb-0.5">
+          <span class="text-xs font-semibold text-white">${esc(c.author||'Engineer')}</span>
+          <span class="text-xs text-sentinel-muted">${c.ts ? c.ts.replace('T',' ').replace('Z','') : ''}</span>
+        </div>
+        <div class="text-xs text-sentinel-muted whitespace-pre-wrap leading-relaxed">${esc(c.text)}</div>
       </div>
     </div>`).join('');
 }
 
-function toggleStub(i) { document.getElementById(`stub-${i}`).classList.toggle('hidden'); }
-function copyStub(i) {
-  const filtered = appState.testCases.filter(tc => appState.activeCategory==='all' || tc.category===appState.activeCategory);
-  navigator.clipboard.writeText(filtered[i]?.stub||'');
+function renderHistory(tc) {
+  const history = tc.history || [];
+  if (!history.length) return '<div class="text-xs text-sentinel-muted py-2">No changes recorded yet.</div>';
+  return [...history].reverse().map(h => `
+    <div class="flex items-start gap-2 text-xs">
+      <span class="text-sentinel-muted flex-shrink-0 font-mono">${(h.ts||'').replace('T',' ').replace('Z','')}</span>
+      <span class="text-sentinel-muted">·</span>
+      <span class="text-sentinel-accent font-mono">${esc(h.field)}</span>
+      <span class="text-sentinel-muted">changed from</span>
+      <span class="text-white font-mono">${esc(h.old)}</span>
+      <span class="text-sentinel-muted">→</span>
+      <span class="text-white font-mono">${esc(h.new)}</span>
+    </div>`).join('');
 }
+
+// ── Expand / collapse ────────────────────────────────────────────────────
+function toggleCard(id) {
+  if (!appState.expandedTests) appState.expandedTests = new Set();
+  const body    = document.getElementById(`tc-body-${id}`);
+  const chevron = document.getElementById(`chevron-${id}`);
+  const open    = body.classList.toggle('hidden');   // toggle returns new state
+  chevron.style.transform = open ? '' : 'rotate(180deg)';
+  if (!open) appState.expandedTests.add(id); else appState.expandedTests.delete(id);
+}
+
+// ── Sub-tab switching ────────────────────────────────────────────────────
+function switchTcTab(tcId, tab) {
+  const tabs = ['stub','fix','criteria','thread','history'];
+  tabs.forEach(t => {
+    document.getElementById(`tc-${tcId}-${t}`)?.classList.toggle('hidden', t !== tab);
+    document.querySelector(`.tc-tab[data-tc="${tcId}"][data-tab="${t}"]`)?.classList.remove('border-sentinel-accent','text-sentinel-accent');
+    document.querySelector(`.tc-tab[data-tc="${tcId}"][data-tab="${t}"]`)?.classList.add('border-transparent','text-sentinel-muted');
+  });
+  const active = document.querySelector(`.tc-tab[data-tc="${tcId}"][data-tab="${tab}"]`);
+  if (active) {
+    active.classList.remove('border-transparent','text-sentinel-muted');
+    active.classList.add('border-sentinel-accent','text-sentinel-accent');
+  }
+  if (tab === 'criteria') updateCriteriaProgress(tcId);
+}
+
+// ── Acceptance criteria checkboxes ───────────────────────────────────────
+function toggleCriteria(tcId, idx, checked) {
+  if (!appState.criteriaChecked) appState.criteriaChecked = {};
+  if (!appState.criteriaChecked[tcId]) appState.criteriaChecked[tcId] = {};
+  appState.criteriaChecked[tcId][idx] = checked;
+  updateCriteriaProgress(tcId);
+}
+function updateCriteriaProgress(tcId) {
+  const tc = appState.testCases.find(t => t.id === tcId);
+  if (!tc) return;
+  const total   = (tc.acceptance_criteria||[]).length;
+  const checked = Object.values(appState.criteriaChecked?.[tcId]||{}).filter(Boolean).length;
+  const el      = document.getElementById(`crit-progress-${tcId}`);
+  if (el) {
+    const pct = total ? Math.round(checked/total*100) : 0;
+    el.innerHTML = `
+      <div class="flex items-center gap-2">
+        <div class="flex-1 h-1 bg-sentinel-border rounded-full overflow-hidden">
+          <div class="h-full bg-sentinel-green rounded-full transition-all" style="width:${pct}%"></div>
+        </div>
+        <span class="${pct===100?'text-sentinel-green':'text-sentinel-muted'}">${checked}/${total} criteria met</span>
+      </div>`;
+  }
+}
+
+// ── Editor helpers ───────────────────────────────────────────────────────
+function handleEditorTab(e) {
+  if (e.key !== 'Tab') return;
+  e.preventDefault();
+  const ta  = e.target;
+  const s   = ta.selectionStart;
+  const end = ta.selectionEnd;
+  ta.value  = ta.value.substring(0,s) + '    ' + ta.value.substring(end);
+  ta.selectionStart = ta.selectionEnd = s + 4;
+}
+
+function copyCode(tcId, field) {
+  const editorId = field === 'stub' ? `tc-${tcId}-stub-editor` : `tc-${tcId}-fix-editor`;
+  const el = document.getElementById(editorId);
+  if (el) navigator.clipboard.writeText(el.value);
+}
+
+async function saveCode(tcId, field) {
+  const editorId = field === 'stub' ? `tc-${tcId}-stub-editor` : `tc-${tcId}-fix-editor`;
+  const savedId  = field === 'stub' ? `tc-${tcId}-stub-saved` : `tc-${tcId}-fix-saved`;
+  const el       = document.getElementById(editorId);
+  if (!el) return;
+  const code = el.value;
+
+  // Update local state immediately
+  const tc = appState.testCases.find(t => t.id === tcId);
+  if (tc) tc[field] = code;
+
+  // Persist to server
+  try {
+    await fetch(`/api/tests/${tcId}/code`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ field, code }),
+    });
+  } catch {}
+
+  const saved = document.getElementById(savedId);
+  if (saved) {
+    saved.classList.remove('hidden');
+    setTimeout(() => saved.classList.add('hidden'), 2000);
+  }
+}
+
+// ── Status + assignee ────────────────────────────────────────────────────
+async function updateStatus(tcId, newStatus) {
+  const tc = appState.testCases.find(t => t.id === tcId);
+  if (!tc) return;
+  const oldStatus = tc.status;
+  tc.status = newStatus;
+  tc.updated_at = new Date().toISOString().replace('.000','');
+
+  // Add to local history
+  tc.history = tc.history || [];
+  tc.history.push({ ts: tc.updated_at, field:'status', old: oldStatus, new: newStatus });
+
+  // Re-render just the header portion without closing the card
+  const card = document.getElementById(`tc-card-${tcId}`);
+  if (card) {
+    const newCard = document.createElement('div');
+    newCard.innerHTML = renderTestCard(tc);
+    const newEl = newCard.firstElementChild;
+    // Preserve expanded state
+    if (appState.expandedTests?.has(tcId)) {
+      newEl.querySelector(`#tc-body-${tcId}`)?.classList.remove('hidden');
+      const chev = newEl.querySelector(`#chevron-${tcId}`);
+      if (chev) chev.style.transform = 'rotate(180deg)';
+    }
+    card.replaceWith(newEl);
+  }
+
+  renderTestStatsBar();
+
+  // Persist
+  try {
+    await fetch(`/api/tests/${tcId}/status`, {
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ status: newStatus }),
+    });
+  } catch {}
+}
+
+async function updateAssignee(tcId, name) {
+  const tc = appState.testCases.find(t => t.id === tcId);
+  if (tc) tc.assignee = name;
+  try {
+    await fetch(`/api/tests/${tcId}/status`, {
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ status: tc?.status || 'pending', assignee: name }),
+    });
+  } catch {}
+}
+
+// ── Comments ─────────────────────────────────────────────────────────────
+async function postComment(tcId) {
+  const input  = document.getElementById(`tc-${tcId}-comment-input`);
+  const author = document.getElementById(`tc-${tcId}-author`);
+  const text   = input?.value.trim();
+  if (!text) return;
+
+  const newComment = {
+    id:     Math.random().toString(36).slice(2,10),
+    author: author?.value.trim() || 'Engineer',
+    text,
+    ts:     new Date().toISOString().replace('.000',''),
+    edited: false,
+  };
+
+  const tc = appState.testCases.find(t => t.id === tcId);
+  if (tc) tc.comments = [...(tc.comments||[]), newComment];
+
+  // Re-render comment list in place
+  const container = document.getElementById(`tc-${tcId}-comments`);
+  if (container && tc) container.innerHTML = renderComments(tc);
+
+  // Update discussion tab badge
+  const threadBtn = document.querySelector(`.tc-tab[data-tc="${tcId}"][data-tab="thread"]`);
+  if (threadBtn && tc) {
+    const n = tc.comments.length;
+    threadBtn.innerHTML = `Discussion <span class="ml-1 badge bg-sentinel-accent/10 text-sentinel-accent">${n}</span>`;
+  }
+
+  // Update header comment count
+  _renderFilteredTests(); // simplest way to keep count in sync without a full re-render
+
+  if (input) input.value = '';
+
+  // Persist
+  try {
+    await fetch(`/api/tests/${tcId}/comments`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ text: newComment.text, author: newComment.author }),
+    });
+  } catch {}
+}
+
+// ── Filter controls ──────────────────────────────────────────────────────
 function filterTests() { _renderFilteredTests(); }
+
 function filterCat(cat) {
   appState.activeCategory = cat;
   document.querySelectorAll('.cat-btn').forEach(b => {
-    b.className = `cat-btn px-3 py-1.5 rounded-lg text-xs font-medium transition ${b.dataset.cat===cat ? 'bg-sentinel-accent/10 text-sentinel-accent border border-sentinel-accent/30' : 'bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-accent'}`;
+    const on = b.dataset.cat === cat;
+    b.className = `cat-btn px-2.5 py-1 rounded-md text-xs font-medium transition ${
+      on ? 'bg-sentinel-accent/10 text-sentinel-accent border border-sentinel-accent/30'
+         : 'bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-accent'}`;
   });
   _renderFilteredTests();
 }
+
+function filterStatus(st) {
+  appState.activeStatusFilter = st;
+  document.querySelectorAll('.st-btn').forEach(b => {
+    const on = b.dataset.st === st;
+    b.className = `st-btn px-2.5 py-1 rounded-md text-xs font-medium transition ${
+      on ? 'bg-sentinel-accent/10 text-sentinel-accent border border-sentinel-accent/30'
+         : 'bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-accent'}`;
+  });
+  _renderFilteredTests();
+}
+
+// ── Export ───────────────────────────────────────────────────────────────
 function exportTests() {
-  const lines = ['"""','Auto-generated test stubs — The Code Sentinel','Fill in the TODOs before running with pytest.','"""','import pytest','', ...appState.testCases.map(tc=>tc.stub+'\n')];
+  const lines = [
+    '"""',
+    'Auto-generated test stubs — The Code Sentinel',
+    'Fill in the TODOs before running with pytest.',
+    '"""',
+    'import pytest',
+    '',
+    ...appState.testCases.map(tc => {
+      const header = `# ${tc.id} | ${tc.category} | ${tc.severity} | ${tc.status}`;
+      const crit   = (tc.acceptance_criteria||[]).map(c => `#   - ${c}`).join('\n');
+      return `${header}\n# Acceptance criteria:\n${crit}\n${tc.stub}\n`;
+    }),
+  ];
   const blob = new Blob([lines.join('\n')], { type:'text/x-python' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
