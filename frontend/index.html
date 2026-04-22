@@ -1,0 +1,1677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Code Sentinel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            sentinel: {
+              bg:      '#0d1117',
+              surface: '#161b22',
+              card:    '#1c2128',
+              border:  '#30363d',
+              accent:  '#58a6ff',
+              green:   '#3fb950',
+              red:     '#f85149',
+              yellow:  '#d29922',
+              purple:  '#bc8cff',
+              teal:    '#39d353',
+              muted:   '#8b949e',
+            }
+          },
+          fontFamily: { mono: ['JetBrains Mono', 'Fira Code', 'monospace'] },
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #0d1117; color: #e6edf3; min-height: 100vh; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #161b22; }
+    ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+    .tab-active   { border-bottom: 2px solid #58a6ff; color: #58a6ff; }
+    .tab-inactive { border-bottom: 2px solid transparent; color: #8b949e; }
+    textarea { resize: vertical; }
+    .code-block { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; line-height: 1.6; }
+    .badge { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:9999px; font-size:.72rem; font-weight:600; }
+    .progress-bar { transition: width .6s ease; }
+    .step-card { transition: all .3s ease; }
+
+    /* ── Animations ── */
+    .fade-in  { animation: fadeIn .35s ease forwards; }
+    .slide-up { animation: slideUp .4s cubic-bezier(.22,1,.36,1) forwards; }
+    @keyframes fadeIn  { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:none } }
+    @keyframes slideUp { from { opacity:0; transform:translateY(20px) } to { opacity:1; transform:none } }
+    .pulse-dot { animation: pulseDot 1.2s ease-in-out infinite; }
+    @keyframes pulseDot { 0%,100% { opacity:1 } 50% { opacity:.3 } }
+
+    /* ── Screen transitions ── */
+    .screen { transition: opacity .4s ease, transform .4s ease; }
+    .screen.hidden-out { opacity:0; transform:translateY(-12px); pointer-events:none; position:absolute; width:100%; }
+
+    /* ── Wizard step indicator ── */
+    .wizard-step-line { flex:1; height:1px; background:#30363d; }
+    .wizard-step-line.done { background: #58a6ff; transition: background .4s; }
+
+    /* ── Drop zone ── */
+    .drop-zone { transition: all .2s ease; }
+    .drop-zone.drag-over { border-color: #58a6ff; background: rgba(88,166,255,.05); }
+
+    /* ── Repo card ── */
+    .repo-card { cursor:pointer; transition: all .2s ease; }
+    .repo-card:hover { border-color: #58a6ff44; background: #1c2128; }
+    .repo-card.selected { border-color: #58a6ff; background: rgba(88,166,255,.05); }
+
+    /* ── Flow diagram ── */
+    .flow-arrow { color: #30363d; font-size: 1.2rem; margin: 0 2px; }
+
+    /* ── Gradient glow on hero ── */
+    .hero-glow {
+      background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(88,166,255,.12) 0%, transparent 70%);
+    }
+
+    /* ── File chip ── */
+    .file-chip { animation: chipIn .2s ease forwards; }
+    @keyframes chipIn { from { opacity:0; scale:.92 } to { opacity:1; scale:1 } }
+
+    /* ── Test cards ── */
+    .line-clamp-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .tc-panel textarea { min-height: 160px; }
+    .tc-tab { transition: color .15s, border-color .15s; }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════ NAV ══ -->
+<header class="border-b border-sentinel-border sticky top-0 z-30 bg-sentinel-bg/95 backdrop-blur">
+  <div class="max-w-screen-xl mx-auto flex items-center justify-between px-6 py-3">
+    <div class="flex items-center gap-3 cursor-pointer" onclick="goHome()">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#58a6ff" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <path d="M9 12l2 2 4-4"/>
+      </svg>
+      <span class="font-bold text-base tracking-tight">The Code Sentinel</span>
+    </div>
+
+    <!-- Breadcrumb (visible in workspace) -->
+    <div id="navBreadcrumb" class="hidden items-center gap-2 text-sm text-sentinel-muted">
+      <span id="navRepo" class="text-white font-medium"></span>
+      <span>·</span>
+      <span id="navBranch" class="font-mono text-xs text-sentinel-accent"></span>
+      <span class="mx-1">·</span>
+      <span id="navPrdCount" class="text-xs"></span>
+    </div>
+
+    <div class="flex items-center gap-4 text-sm">
+      <a href="https://github.com/oolusina/DAIP_P4_prototype" target="_blank"
+         class="text-sentinel-muted hover:text-white transition flex items-center gap-1.5">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.49.5.09.66-.22.66-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.56-1.11-4.56-4.95 0-1.09.39-1.98 1.03-2.68-.1-.26-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02A9.56 9.56 0 0112 6.8c.85 0 1.71.11 2.51.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.38.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.85-2.34 4.7-4.57 4.95.36.31.68.92.68 1.85v2.74c0 .27.16.58.67.48A10.01 10.01 0 0022 12c0-5.52-4.48-10-10-10z"/>
+        </svg>
+        Source
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════ SCREEN WRAPPER ══ -->
+<div class="relative">
+
+<!-- ══════════════════════════════════════ WIZARD SCREEN ══ -->
+<div id="screenWizard" class="screen">
+
+  <!-- Hero -->
+  <div class="hero-glow border-b border-sentinel-border">
+    <div class="max-w-2xl mx-auto px-6 pt-14 pb-10 text-center">
+      <div class="inline-flex items-center gap-2 text-xs font-medium text-sentinel-accent bg-sentinel-accent/10 border border-sentinel-accent/20 rounded-full px-3 py-1 mb-5">
+        <span class="w-1.5 h-1.5 rounded-full bg-sentinel-accent animate-pulse inline-block"></span>
+        Agentic QA Pipeline
+      </div>
+      <h1 class="text-3xl sm:text-4xl font-bold leading-tight mb-3 tracking-tight">
+        From PRD to test suite<br class="hidden sm:block" /> in minutes
+      </h1>
+      <p class="text-sentinel-muted text-base leading-relaxed max-w-lg mx-auto">
+        Upload your requirements, connect a repository, and let three specialised AI agents extract constraints, audit your code, and generate a runnable QA suite — automatically.
+      </p>
+
+      <!-- Flow diagram -->
+      <div class="mt-8 flex items-center justify-center gap-1 flex-wrap text-xs font-medium">
+        <div class="flex items-center gap-1.5 bg-sentinel-surface border border-sentinel-border rounded-full px-3 py-1.5">
+          <span>📄</span> Upload PRD
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flex items-center gap-1.5 bg-sentinel-surface border border-sentinel-border rounded-full px-3 py-1.5">
+          <span>📦</span> Select Repo
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flex items-center gap-1.5 bg-sentinel-surface border border-sentinel-border rounded-full px-3 py-1.5">
+          <span>🗺️</span> Extract Requirements
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flex items-center gap-1.5 bg-sentinel-surface border border-sentinel-border rounded-full px-3 py-1.5">
+          <span>🔬</span> Translate Logic
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flex items-center gap-1.5 bg-sentinel-surface border border-sentinel-border rounded-full px-3 py-1.5">
+          <span>⚔️</span> Audit
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flex items-center gap-1.5 bg-sentinel-accent/10 border border-sentinel-accent/30 text-sentinel-accent rounded-full px-3 py-1.5">
+          <span>✅</span> QA Test Suite
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Wizard card -->
+  <div class="max-w-2xl mx-auto px-6 py-8">
+
+    <!-- Step indicator -->
+    <div class="flex items-center gap-2 mb-8" id="stepIndicator">
+      <div class="flex items-center gap-2">
+        <div id="si-dot-1" class="w-7 h-7 rounded-full border-2 border-sentinel-accent bg-sentinel-accent/10 text-sentinel-accent text-xs font-bold flex items-center justify-center">1</div>
+        <span id="si-label-1" class="text-sm font-medium text-white">Upload PRDs</span>
+      </div>
+      <div id="si-line-1" class="wizard-step-line mx-1"></div>
+      <div class="flex items-center gap-2">
+        <div id="si-dot-2" class="w-7 h-7 rounded-full border-2 border-sentinel-border text-sentinel-muted text-xs font-bold flex items-center justify-center">2</div>
+        <span id="si-label-2" class="text-sm font-medium text-sentinel-muted">Select Repo</span>
+      </div>
+      <div id="si-line-2" class="wizard-step-line mx-1"></div>
+      <div class="flex items-center gap-2">
+        <div id="si-dot-3" class="w-7 h-7 rounded-full border-2 border-sentinel-border text-sentinel-muted text-xs font-bold flex items-center justify-center">3</div>
+        <span id="si-label-3" class="text-sm font-medium text-sentinel-muted">Review &amp; Launch</span>
+      </div>
+    </div>
+
+    <!-- ── STEP 1: Upload PRDs ── -->
+    <div id="wizStep1" class="slide-up space-y-5">
+      <div>
+        <h2 class="text-xl font-semibold mb-1">Upload your PRD(s)</h2>
+        <p class="text-sentinel-muted text-sm">Attach one or more Product Requirement Documents. Markdown, plain text, and Word documents are all accepted.</p>
+      </div>
+
+      <!-- Drop zone -->
+      <div id="prdDropZone"
+        class="drop-zone border-2 border-dashed border-sentinel-border rounded-xl p-10 text-center cursor-pointer"
+        onclick="document.getElementById('prdFileInput').click()"
+        ondragover="dzDragOver(event,'prdDropZone')"
+        ondragleave="dzDragLeave('prdDropZone')"
+        ondrop="dzDrop(event,'prd')">
+        <div class="w-14 h-14 rounded-2xl bg-sentinel-surface border border-sentinel-border flex items-center justify-center mx-auto mb-4">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#58a6ff" stroke-width="1.8">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="18" x2="12" y2="12"/>
+            <line x1="9" y1="15" x2="15" y2="15"/>
+          </svg>
+        </div>
+        <p class="text-sm font-medium text-white mb-1">Drop files here or <span class="text-sentinel-accent">browse</span></p>
+        <p class="text-xs text-sentinel-muted">.md, .txt, .pdf, .docx accepted · Multiple files supported</p>
+        <input id="prdFileInput" type="file" class="hidden" multiple accept=".md,.txt,.pdf,.docx,.doc" onchange="handlePrdFiles(event)" />
+      </div>
+
+      <!-- File list -->
+      <div id="prdFileList" class="space-y-2 hidden"></div>
+
+      <!-- Divider with paste option -->
+      <div class="flex items-center gap-3">
+        <div class="flex-1 h-px bg-sentinel-border"></div>
+        <button onclick="togglePrdPaste()" class="text-xs text-sentinel-muted hover:text-white transition px-2">or paste text</button>
+        <div class="flex-1 h-px bg-sentinel-border"></div>
+      </div>
+
+      <div id="prdPasteArea" class="hidden space-y-2">
+        <textarea id="prdPasteText" rows="8"
+          placeholder="Paste PRD content here…"
+          class="w-full bg-sentinel-surface border border-sentinel-border rounded-lg p-3 text-sm text-sentinel-muted focus:text-white focus:border-sentinel-accent focus:outline-none code-block transition"
+          oninput="syncPrdPaste()"
+        ></textarea>
+      </div>
+
+      <!-- Load example shortcut -->
+      <div class="flex items-center justify-between pt-1">
+        <button onclick="loadWizardExample()" class="text-xs text-sentinel-accent hover:underline flex items-center gap-1.5">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+          Load SecureNotes example
+        </button>
+        <button id="step1Next" onclick="gotoStep(2)" disabled
+          class="px-5 py-2 rounded-lg bg-sentinel-accent text-sentinel-bg font-semibold text-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-sentinel-accent/90 transition">
+          Continue →
+        </button>
+      </div>
+    </div>
+
+    <!-- ── STEP 2: Select Repository ── -->
+    <div id="wizStep2" class="hidden space-y-5">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-xl font-semibold mb-1">Select a repository</h2>
+          <p class="text-sentinel-muted text-sm">Choose the codebase these requirements apply to. The pipeline will analyse its source code against your PRD.</p>
+        </div>
+        <button class="text-xs flex items-center gap-1.5 bg-sentinel-surface border border-sentinel-border rounded-lg px-3 py-1.5 text-sentinel-muted hover:border-sentinel-accent hover:text-white transition">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.49.5.09.66-.22.66-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.56-1.11-4.56-4.95 0-1.09.39-1.98 1.03-2.68-.1-.26-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02A9.56 9.56 0 0112 6.8c.85 0 1.71.11 2.51.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.38.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.85-2.34 4.7-4.57 4.95.36.31.68.92.68 1.85v2.74c0 .27.16.58.67.48A10.01 10.01 0 0022 12c0-5.52-4.48-10-10-10z"/></svg>
+          Connect GitHub
+        </button>
+      </div>
+
+      <!-- Search -->
+      <div class="relative">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-sentinel-muted" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input id="repoSearch" type="text" placeholder="Search repositories…"
+          oninput="filterRepos()"
+          class="w-full bg-sentinel-surface border border-sentinel-border rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-sentinel-accent text-white placeholder-sentinel-muted"
+        />
+      </div>
+
+      <!-- Repo list -->
+      <div id="repoList" class="space-y-2 max-h-80 overflow-y-auto pr-1"></div>
+
+      <!-- Branch selector (shown after repo is selected) -->
+      <div id="branchRow" class="hidden items-center gap-3 bg-sentinel-surface border border-sentinel-border rounded-xl px-4 py-3">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b949e" stroke-width="2"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 01-9 9"/></svg>
+        <span class="text-xs text-sentinel-muted">Branch</span>
+        <select id="branchSelect" class="flex-1 bg-transparent text-sm text-white focus:outline-none cursor-pointer">
+          <option value="main">main</option>
+          <option value="develop">develop</option>
+          <option value="staging">staging</option>
+          <option value="feature/auth-refactor">feature/auth-refactor</option>
+          <option value="feature/encryption">feature/encryption</option>
+        </select>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8b949e" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+
+      <div class="flex items-center justify-between pt-1">
+        <button onclick="gotoStep(1)" class="text-xs text-sentinel-muted hover:text-white transition">← Back</button>
+        <button id="step2Next" onclick="gotoStep(3)" disabled
+          class="px-5 py-2 rounded-lg bg-sentinel-accent text-sentinel-bg font-semibold text-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-sentinel-accent/90 transition">
+          Continue →
+        </button>
+      </div>
+    </div>
+
+    <!-- ── STEP 3: Review & Launch ── -->
+    <div id="wizStep3" class="hidden space-y-5">
+      <div>
+        <h2 class="text-xl font-semibold mb-1">Review &amp; launch</h2>
+        <p class="text-sentinel-muted text-sm">Confirm your setup before running the pipeline.</p>
+      </div>
+
+      <!-- Summary cards -->
+      <div class="grid grid-cols-2 gap-3">
+        <!-- PRDs summary -->
+        <div class="bg-sentinel-surface border border-sentinel-border rounded-xl p-4">
+          <div class="flex items-center gap-2 mb-3">
+            <div class="w-7 h-7 rounded-lg bg-sentinel-accent/10 flex items-center justify-center">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#58a6ff" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <span class="text-xs font-semibold text-sentinel-muted uppercase tracking-wider">Documents</span>
+          </div>
+          <div id="reviewPrds" class="space-y-1.5"></div>
+        </div>
+        <!-- Repo summary -->
+        <div class="bg-sentinel-surface border border-sentinel-border rounded-xl p-4">
+          <div class="flex items-center gap-2 mb-3">
+            <div class="w-7 h-7 rounded-lg bg-sentinel-green/10 flex items-center justify-center">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+            </div>
+            <span class="text-xs font-semibold text-sentinel-muted uppercase tracking-wider">Repository</span>
+          </div>
+          <div id="reviewRepo" class="space-y-1"></div>
+        </div>
+      </div>
+
+      <!-- Optional: Tech spec -->
+      <div class="bg-sentinel-surface border border-sentinel-border rounded-xl overflow-hidden">
+        <button onclick="toggleTechSpec()" class="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-white hover:bg-white/[.02] transition">
+          <span class="flex items-center gap-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b949e" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            Technical specification <span class="text-xs font-normal text-sentinel-muted ml-1">(optional)</span>
+          </span>
+          <svg id="techSpecChevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b949e" stroke-width="2" style="transition:transform .2s"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div id="techSpecPanel" class="hidden border-t border-sentinel-border px-4 py-3">
+          <textarea id="input-tech_spec" rows="6"
+            placeholder="Stack, deployment target, auth mechanism, rate-limiting…"
+            class="w-full bg-transparent text-sm text-sentinel-muted focus:text-white focus:outline-none code-block"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Pipeline mode toggle -->
+      <div class="bg-sentinel-surface border border-sentinel-border rounded-xl p-4 space-y-3">
+        <div class="text-xs font-semibold text-sentinel-muted uppercase tracking-wider">Pipeline mode</div>
+        <div class="grid grid-cols-2 gap-3">
+          <label id="modeDemoLabel"
+            class="mode-option flex items-start gap-3 p-3 rounded-lg border-2 border-sentinel-accent bg-sentinel-accent/5 cursor-pointer">
+            <input type="radio" name="pipelineMode" value="demo" checked class="mt-0.5 accent-sentinel-accent" onchange="updateModeUI()" />
+            <div>
+              <div class="text-sm font-semibold text-white">Demo mode</div>
+              <div class="text-xs text-sentinel-muted mt-0.5">Instant realistic results · No API key needed</div>
+            </div>
+          </label>
+          <label id="modeLiveLabel"
+            class="mode-option flex items-start gap-3 p-3 rounded-lg border-2 border-sentinel-border cursor-pointer hover:border-sentinel-accent/40 transition">
+            <input type="radio" name="pipelineMode" value="live" class="mt-0.5 accent-sentinel-accent" onchange="updateModeUI()" />
+            <div>
+              <div class="text-sm font-semibold text-white flex items-center gap-1.5">Live <span class="badge bg-sentinel-purple/10 text-sentinel-purple">GPT-4o</span></div>
+              <div class="text-xs text-sentinel-muted mt-0.5">Real analysis · Requires OPENAI_API_KEY</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Launch CTA -->
+      <div class="flex items-center justify-between pt-1">
+        <button onclick="gotoStep(2)" class="text-xs text-sentinel-muted hover:text-white transition">← Back</button>
+        <button onclick="launchPipeline()"
+          class="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-sentinel-accent text-sentinel-bg font-bold text-sm hover:bg-sentinel-accent/90 active:scale-95 transition">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Launch Analysis
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /wizard card -->
+</div><!-- /screenWizard -->
+
+
+<!-- ══════════════════════════════════════ WORKSPACE SCREEN ══ -->
+<div id="screenWorkspace" class="screen hidden-out">
+  <main class="max-w-screen-xl mx-auto px-6 py-6 grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+
+    <!-- ── LEFT: Inputs + context ── -->
+    <section class="space-y-5">
+
+      <!-- Project context banner -->
+      <div id="projectBanner" class="bg-sentinel-surface border border-sentinel-border rounded-xl px-4 py-3 flex items-center gap-4">
+        <div class="w-9 h-9 rounded-xl bg-sentinel-green/10 border border-sentinel-green/20 flex items-center justify-center flex-shrink-0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-semibold text-white truncate" id="bannerRepo">—</div>
+          <div class="flex items-center gap-2 mt-0.5">
+            <span class="font-mono text-xs text-sentinel-accent" id="bannerBranch">—</span>
+            <span class="text-sentinel-border">·</span>
+            <span class="text-xs text-sentinel-muted" id="bannerPrdNames">—</span>
+          </div>
+        </div>
+        <button onclick="goHome()" class="text-xs text-sentinel-muted hover:text-white transition flex-shrink-0">Change setup</button>
+      </div>
+
+      <!-- Input tabs -->
+      <div>
+        <div class="flex gap-0 border-b border-sentinel-border text-sm font-medium" id="inputTabs">
+          <button data-tab="prd"         onclick="switchTab('prd')"         class="px-4 py-2 tab-active   transition">PRD</button>
+          <button data-tab="tech_spec"   onclick="switchTab('tech_spec')"   class="px-4 py-2 tab-inactive transition">Tech Spec</button>
+          <button data-tab="source_code" onclick="switchTab('source_code')" class="px-4 py-2 tab-inactive transition">Source Code</button>
+        </div>
+
+        <div id="panel-prd" class="mt-3 space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="text-xs text-sentinel-muted font-mono uppercase tracking-wider">Product Requirements Document</label>
+            <button onclick="loadExample('prd')" class="text-xs text-sentinel-accent hover:underline">Load example</button>
+          </div>
+          <textarea id="input-prd" rows="13"
+            placeholder="Your PRD content…"
+            class="w-full bg-sentinel-surface border border-sentinel-border rounded-lg p-3 text-sm text-sentinel-muted focus:text-white focus:border-sentinel-accent focus:outline-none code-block transition"
+          ></textarea>
+        </div>
+
+        <div id="panel-tech_spec" class="mt-3 space-y-2 hidden">
+          <div class="flex items-center justify-between">
+            <label class="text-xs text-sentinel-muted font-mono uppercase tracking-wider">Technical Specification</label>
+            <button onclick="loadExample('tech_spec')" class="text-xs text-sentinel-accent hover:underline">Load example</button>
+          </div>
+          <textarea id="input-tech_spec-ws" rows="13"
+            placeholder="Stack, deployment target, auth mechanism, rate-limiting…"
+            class="w-full bg-sentinel-surface border border-sentinel-border rounded-lg p-3 text-sm text-sentinel-muted focus:text-white focus:border-sentinel-accent focus:outline-none code-block transition"
+          ></textarea>
+        </div>
+
+        <div id="panel-source_code" class="mt-3 space-y-2 hidden">
+          <div class="flex items-center justify-between">
+            <label class="text-xs text-sentinel-muted font-mono uppercase tracking-wider">Source Code</label>
+            <button onclick="loadExample('source_code')" class="text-xs text-sentinel-accent hover:underline">Load example</button>
+          </div>
+          <textarea id="input-source_code" rows="13"
+            placeholder="Paste the source code to review…"
+            class="w-full bg-sentinel-surface border border-sentinel-border rounded-lg p-3 text-sm text-sentinel-muted focus:text-white focus:border-sentinel-accent focus:outline-none code-block transition"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Source code drop zone -->
+      <div id="srcDropZone"
+        class="drop-zone border-2 border-dashed border-sentinel-border rounded-lg p-5 text-center text-sentinel-muted cursor-pointer text-sm"
+        onclick="document.getElementById('srcFileInput').click()"
+        ondragover="dzDragOver(event,'srcDropZone')"
+        ondragleave="dzDragLeave('srcDropZone')"
+        ondrop="dzDrop(event,'src')">
+        <svg class="mx-auto mb-1.5 opacity-40" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+        </svg>
+        Drop source files here or <span class="text-sentinel-accent">browse</span>
+        <input id="srcFileInput" type="file" class="hidden" multiple accept=".py,.js,.ts,.go,.rs,.java,.rb,.php,.cs,.cpp,.c,.swift" onchange="handleSrcFiles(event)" />
+      </div>
+
+      <!-- Run buttons -->
+      <div class="flex gap-3">
+        <button id="btnMock" onclick="runAnalysis(true)"
+          class="flex-1 bg-sentinel-surface border border-sentinel-border text-white font-semibold py-2.5 px-4 rounded-lg hover:border-sentinel-accent hover:text-sentinel-accent transition text-sm">
+          ▶ Re-run Demo
+        </button>
+        <button id="btnReal" onclick="runAnalysis(false)"
+          class="flex-1 bg-sentinel-accent text-sentinel-bg font-semibold py-2.5 px-4 rounded-lg hover:bg-sentinel-accent/90 transition text-sm">
+          ▶ Run with GPT-4o
+        </button>
+      </div>
+    </section>
+
+    <!-- ── RIGHT: Results ── -->
+    <section class="space-y-5" id="resultsPanel">
+
+      <div id="emptyState" class="flex flex-col items-center justify-center border border-dashed border-sentinel-border rounded-xl py-24 text-sentinel-muted">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" class="opacity-25 mb-4">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        <p class="text-sm font-medium">Pipeline ready</p>
+        <p class="text-xs text-sentinel-muted/60 mt-1">Results will appear here</p>
+      </div>
+
+      <!-- Live pipeline progress -->
+      <div id="pipelineProgress" class="hidden space-y-3">
+        <div class="flex items-center justify-between text-xs text-sentinel-muted mb-1">
+          <span id="progressLabel">Initialising…</span>
+          <span id="progressPct">0%</span>
+        </div>
+        <div class="h-1.5 bg-sentinel-surface rounded-full overflow-hidden border border-sentinel-border">
+          <div id="progressBar" class="progress-bar h-full bg-sentinel-accent rounded-full" style="width:0%"></div>
+        </div>
+        <div class="grid grid-cols-3 gap-3 mt-2">
+          <div id="step-1" class="step-card bg-sentinel-surface border border-sentinel-border rounded-xl p-4 text-center">
+            <div class="text-2xl mb-1">🗺️</div>
+            <div class="text-xs font-semibold text-white">Cartographer</div>
+            <div class="text-xs text-sentinel-muted mt-0.5">Context extraction</div>
+            <div id="step-1-status" class="mt-2 text-xs text-sentinel-muted">Waiting…</div>
+          </div>
+          <div id="step-2" class="step-card bg-sentinel-surface border border-sentinel-border rounded-xl p-4 text-center">
+            <div class="text-2xl mb-1">🔬</div>
+            <div class="text-xs font-semibold text-white">Translator</div>
+            <div class="text-xs text-sentinel-muted mt-0.5">Logic IR</div>
+            <div id="step-2-status" class="mt-2 text-xs text-sentinel-muted">Waiting…</div>
+          </div>
+          <div id="step-3" class="step-card bg-sentinel-surface border border-sentinel-border rounded-xl p-4 text-center">
+            <div class="text-2xl mb-1">⚔️</div>
+            <div class="text-xs font-semibold text-white">Auditor</div>
+            <div class="text-xs text-sentinel-muted mt-0.5">Adversarial eval</div>
+            <div id="step-3-status" class="mt-2 text-xs text-sentinel-muted">Waiting…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results tabs -->
+      <div id="resultsTabs" class="hidden">
+        <div class="flex gap-0 border-b border-sentinel-border text-sm font-medium">
+          <button data-rtab="overview"    onclick="switchResultTab('overview')"    class="px-4 py-2 tab-active   transition">Overview</button>
+          <button data-rtab="schema"      onclick="switchResultTab('schema')"      class="px-4 py-2 tab-inactive transition">Schema</button>
+          <button data-rtab="logic"       onclick="switchResultTab('logic')"       class="px-4 py-2 tab-inactive transition">Logic IR</button>
+          <button data-rtab="tests"       onclick="switchResultTab('tests')"       class="px-4 py-2 tab-inactive transition">
+            Tests <span id="testBadge" class="ml-1 badge bg-sentinel-green/10 text-sentinel-green hidden">0</span>
+          </button>
+        </div>
+
+        <!-- Overview -->
+        <div id="rtab-overview" class="mt-4 space-y-4 fade-in">
+          <div id="scoreCard" class="bg-sentinel-surface border border-sentinel-border rounded-xl p-5 flex items-center gap-6">
+            <div class="relative w-20 h-20 flex-shrink-0">
+              <svg viewBox="0 0 36 36" class="w-20 h-20 -rotate-90">
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#30363d" stroke-width="3"/>
+                <circle id="scoreArc" cx="18" cy="18" r="15.9" fill="none"
+                  stroke="#3fb950" stroke-width="3" stroke-linecap="round"
+                  stroke-dasharray="0 100" style="transition:stroke-dasharray .8s ease,stroke .4s"/>
+              </svg>
+              <div class="absolute inset-0 flex items-center justify-center">
+                <span id="scoreNum" class="text-xl font-bold text-white">–</span>
+              </div>
+            </div>
+            <div class="flex-1">
+              <div class="text-sm text-sentinel-muted mb-1">Compliance Score</div>
+              <div id="hardBlockBanner" class="hidden badge bg-sentinel-red/15 text-sentinel-red text-sm mb-2">🚫 HARD BLOCK — deployment halted</div>
+              <div id="summaryText" class="text-sm text-sentinel-muted leading-relaxed"></div>
+            </div>
+          </div>
+          <div class="bg-sentinel-surface border border-sentinel-border rounded-xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-sentinel-border text-xs font-semibold text-sentinel-muted uppercase tracking-wider">Requirement Status</div>
+            <table class="w-full text-sm"><tbody id="reqTableBody"><tr><td class="px-4 py-6 text-center text-sentinel-muted text-xs" colspan="3">No data yet</td></tr></tbody></table>
+          </div>
+          <div class="bg-sentinel-surface border border-sentinel-border rounded-xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-sentinel-border text-xs font-semibold text-sentinel-muted uppercase tracking-wider">Tension Report</div>
+            <div id="tensionList" class="divide-y divide-sentinel-border"></div>
+          </div>
+          <div class="bg-sentinel-surface border border-sentinel-border rounded-xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-sentinel-border text-xs font-semibold text-sentinel-muted uppercase tracking-wider">Golden Path</div>
+            <div id="goldenPath" class="px-4 py-4 text-sm text-white leading-relaxed whitespace-pre-wrap"></div>
+          </div>
+        </div>
+
+        <!-- Schema -->
+        <div id="rtab-schema" class="mt-4 space-y-4 hidden fade-in">
+          <div class="bg-sentinel-surface border border-sentinel-border rounded-xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-sentinel-border text-xs font-semibold text-sentinel-muted uppercase tracking-wider">Constraints</div>
+            <div id="constraintList" class="divide-y divide-sentinel-border"></div>
+          </div>
+          <div class="bg-sentinel-surface border border-sentinel-border rounded-xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-sentinel-border text-xs font-semibold text-sentinel-muted uppercase tracking-wider">Product Goals</div>
+            <div id="goalList" class="divide-y divide-sentinel-border"></div>
+          </div>
+          <div id="missingInfoCard" class="bg-sentinel-yellow/5 border border-sentinel-yellow/30 rounded-xl overflow-hidden hidden">
+            <div class="px-4 py-3 border-b border-sentinel-yellow/30 text-xs font-semibold text-sentinel-yellow uppercase tracking-wider">⚠ Missing Information</div>
+            <ul id="missingInfoList" class="px-4 py-3 space-y-1 text-sm text-sentinel-muted list-disc list-inside"></ul>
+          </div>
+        </div>
+
+        <!-- Logic IR -->
+        <div id="rtab-logic" class="mt-4 space-y-4 hidden fade-in">
+          <div class="bg-sentinel-surface border border-sentinel-border rounded-xl p-4 space-y-3">
+            <div>
+              <div class="text-xs text-sentinel-muted font-mono uppercase tracking-wider mb-1">Primary Intent</div>
+              <div id="primaryIntent" class="text-sm text-white"></div>
+            </div>
+            <div>
+              <div class="text-xs text-sentinel-muted font-mono uppercase tracking-wider mb-2">Execution Path</div>
+              <ol id="execPath" class="space-y-1 text-sm"></ol>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-sentinel-surface border border-sentinel-border rounded-xl p-4">
+              <div class="text-xs text-sentinel-muted font-mono uppercase tracking-wider mb-2">Entry Points</div>
+              <ul id="entryPoints" class="space-y-1 text-sm text-sentinel-green"></ul>
+            </div>
+            <div class="bg-sentinel-surface border border-sentinel-border rounded-xl p-4">
+              <div class="text-xs text-sentinel-muted font-mono uppercase tracking-wider mb-2">Exit Points</div>
+              <ul id="exitPoints" class="space-y-1 text-sm text-sentinel-purple"></ul>
+            </div>
+          </div>
+          <div class="bg-sentinel-red/5 border border-sentinel-red/30 rounded-xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-sentinel-red/30 text-xs font-semibold text-sentinel-red uppercase tracking-wider">Data Vulnerabilities</div>
+            <ul id="vulnList" class="px-4 py-3 space-y-2 text-sm text-sentinel-muted"></ul>
+          </div>
+          <div class="bg-sentinel-surface border border-sentinel-border rounded-xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-sentinel-border text-xs font-semibold text-sentinel-muted uppercase tracking-wider">Dependencies</div>
+            <ul id="depList" class="px-4 py-3 space-y-1.5 text-sm text-sentinel-muted"></ul>
+          </div>
+        </div>
+
+        <!-- Test Cases — interactive engineering suite -->
+        <div id="rtab-tests" class="mt-4 space-y-4 hidden fade-in">
+
+          <!-- Toolbar row 1: search + export -->
+          <div class="flex items-center gap-3">
+            <div class="relative flex-1">
+              <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-sentinel-muted" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input id="testSearch" type="text" placeholder="Search test cases…"
+                oninput="filterTests()"
+                class="w-full bg-sentinel-surface border border-sentinel-border rounded-lg pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:border-sentinel-accent text-white placeholder-sentinel-muted"
+              />
+            </div>
+            <button onclick="exportTests()" title="Export all stubs as .py"
+              class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-accent hover:text-white transition">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+              Export .py
+            </button>
+          </div>
+
+          <!-- Toolbar row 2: status filters only -->
+          <div class="flex items-center gap-2 flex-wrap text-xs">
+            <span class="text-sentinel-muted mr-1">Status:</span>
+            <button onclick="filterStatus('all')"         class="st-btn px-2.5 py-1 rounded-md bg-sentinel-accent/10 text-sentinel-accent border border-sentinel-accent/30 font-medium" data-st="all">All</button>
+            <button onclick="filterStatus('pending')"     class="st-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-muted/60 transition" data-st="pending">Pending</button>
+            <button onclick="filterStatus('in_progress')" class="st-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-yellow/60 hover:text-sentinel-yellow transition" data-st="in_progress">In Progress</button>
+            <button onclick="filterStatus('passed')"      class="st-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-green/60 hover:text-sentinel-green transition" data-st="passed">Passed</button>
+            <button onclick="filterStatus('failed')"      class="st-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-red/60 hover:text-sentinel-red transition" data-st="failed">Failed</button>
+            <button onclick="filterStatus('blocked')"     class="st-btn px-2.5 py-1 rounded-md bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-orange-400/50 hover:text-orange-400 transition" data-st="blocked">Blocked</button>
+          </div>
+
+          <!-- Stats bar -->
+          <div id="testStatsBar" class="grid grid-cols-5 gap-2 text-center text-xs"></div>
+
+          <!-- Test case list -->
+          <div id="testList" class="space-y-3"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div><!-- /screenWorkspace -->
+</div><!-- /screen wrapper -->
+
+
+<!-- ══════════════════════════════════════════════════ SCRIPTS ══ -->
+<script>
+// ───────────────────────────────────────── State
+const appState = {
+  // wizard
+  step: 1,
+  prdFiles: [],      // [{ name, size, content }]
+  selectedRepo: null,
+  selectedBranch: 'main',
+  pipelineMode: 'demo',
+
+  // workspace
+  activeInputTab: 'prd',
+  activeResultTab: 'overview',
+  truthSchema: null, logicTree: null, assessment: null,
+  testCases: [],
+};
+
+// ───────────────────────────────────────── Mock repos
+const MOCK_REPOS = [
+  { id:'r1', org:'oolusina', name:'SecureNotes-API',   lang:'Python',     langColor:'#3572A5', desc:'REST API for encrypted personal notes with JWT auth.',     updated:'2h ago',   stars:12 },
+  { id:'r2', org:'oolusina', name:'DAIP_P4_prototype', lang:'Python',     langColor:'#3572A5', desc:'Agentic AI pipeline prototype — Code Sentinel.',           updated:'just now', stars:3  },
+  { id:'r3', org:'acme-corp', name:'payments-service', lang:'TypeScript', langColor:'#3178c6', desc:'PCI-DSS compliant payments microservice on Node/Express.',  updated:'1d ago',   stars:47 },
+  { id:'r4', org:'acme-corp', name:'auth-gateway',     lang:'Go',         langColor:'#00ADD8', desc:'OAuth2 / OIDC gateway — token issuance and validation.',    updated:'3d ago',   stars:29 },
+  { id:'r5', org:'ml-team',   name:'inference-server', lang:'Python',     langColor:'#3572A5', desc:'FastAPI inference server wrapping LLM endpoints.',          updated:'5d ago',   stars:18 },
+];
+
+// ───────────────────────────────────────── Examples
+const EXAMPLES = {
+  prd: `Product: SecureNotes API v2\n\nGoals:\n- Allow authenticated users to create, read, and delete personal notes.\n- All note content must be encrypted at rest.\n- API response latency must be under 200ms at P95.\n- The system must support 10,000 concurrent users.\n\nNon-Goals:\n- Real-time collaboration features are out of scope for v2.\n\nSecurity:\n- All endpoints must enforce JWT authentication.\n- Passwords must be hashed with bcrypt (cost factor >= 12).\n- Raw user input must never be written to the database without sanitization.`,
+  tech_spec: `Stack: Python 3.11, Flask 3.x, PostgreSQL 15, Redis 7 (session cache).\nDeployment: Docker on AWS ECS Fargate, behind an ALB with TLS 1.3.\nAuth: JWT (HS256) with 15-minute access tokens; refresh tokens stored in Redis.\nEncryption: AES-256-GCM applied to note body before INSERT.\nRate limiting: 100 req/min per user enforced at ALB layer.`,
+  source_code: `from flask import Flask, request, jsonify\nimport sqlite3, hashlib, jwt, os\n\napp = Flask(__name__)\nSECRET = "hardcoded-secret-key"  # TODO: move to env var\n\ndef get_db():\n    return sqlite3.connect("notes.db")\n\n@app.route("/login", methods=["POST"])\ndef login():\n    data = request.get_json()\n    username = data["username"]\n    password = data["password"]\n    pw_hash = hashlib.md5(password.encode()).hexdigest()\n    conn = get_db()\n    row = conn.execute(\n        f"SELECT id FROM users WHERE username='{username}' AND pw_hash='{pw_hash}'"\n    ).fetchone()\n    if row:\n        token = jwt.encode({"user_id": row[0]}, SECRET, algorithm="HS256")\n        return jsonify({"token": token})\n    return jsonify({"error": "Unauthorized"}), 401\n\n@app.route("/notes", methods=["GET"])\ndef get_notes():\n    token = request.headers.get("Authorization", "").replace("Bearer ", "")\n    try:\n        payload = jwt.decode(token, SECRET, algorithms=["HS256"])\n    except Exception:\n        return jsonify({"error": "Invalid token"}), 401\n    conn = get_db()\n    rows = conn.execute(\n        f"SELECT id, body FROM notes WHERE user_id={payload['user_id']}"\n    ).fetchall()\n    return jsonify([{"id": r[0], "body": r[1]} for r in rows])\n\nif __name__ == "__main__":\n    app.run(debug=True)`,
+};
+
+// ───────────────────────────────────────── Init
+window.addEventListener('DOMContentLoaded', () => {
+  renderRepoList(MOCK_REPOS);
+});
+
+// ───────────────────────────────────────── Screen transitions
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(el => {
+    el.classList.toggle('hidden-out', el.id !== id);
+  });
+}
+
+function goHome() {
+  showScreen('screenWizard');
+  document.getElementById('navBreadcrumb').classList.add('hidden');
+  // reset pipeline UI without losing inputs
+  document.getElementById('emptyState').classList.remove('hidden');
+  document.getElementById('pipelineProgress').classList.add('hidden');
+  document.getElementById('resultsTabs').classList.add('hidden');
+}
+
+// ───────────────────────────────────────── Wizard step navigation
+function gotoStep(n) {
+  [1,2,3].forEach(i => {
+    document.getElementById(`wizStep${i}`).classList.toggle('hidden', i !== n);
+    document.getElementById(`wizStep${i}`).classList.toggle('slide-up', i === n);
+  });
+  appState.step = n;
+  updateStepIndicator(n);
+  if (n === 3) buildReviewSummary();
+}
+
+function updateStepIndicator(active) {
+  [1,2,3].forEach(i => {
+    const dot   = document.getElementById(`si-dot-${i}`);
+    const label = document.getElementById(`si-label-${i}`);
+    if (i < active) {
+      dot.className   = 'w-7 h-7 rounded-full border-2 border-sentinel-green bg-sentinel-green/10 text-sentinel-green text-xs font-bold flex items-center justify-center';
+      dot.textContent = '✓';
+      label.className = 'text-sm font-medium text-sentinel-green';
+    } else if (i === active) {
+      dot.className   = 'w-7 h-7 rounded-full border-2 border-sentinel-accent bg-sentinel-accent/10 text-sentinel-accent text-xs font-bold flex items-center justify-center';
+      dot.textContent = String(i);
+      label.className = 'text-sm font-medium text-white';
+    } else {
+      dot.className   = 'w-7 h-7 rounded-full border-2 border-sentinel-border text-sentinel-muted text-xs font-bold flex items-center justify-center';
+      dot.textContent = String(i);
+      label.className = 'text-sm font-medium text-sentinel-muted';
+    }
+    if (i < 3) {
+      const line = document.getElementById(`si-line-${i}`);
+      line.classList.toggle('done', i < active);
+    }
+  });
+}
+
+// ───────────────────────────────────────── Drag & drop helpers
+function dzDragOver(e, id) { e.preventDefault(); document.getElementById(id).classList.add('drag-over'); }
+function dzDragLeave(id)   { document.getElementById(id).classList.remove('drag-over'); }
+function dzDrop(e, type)   {
+  e.preventDefault();
+  dzDragLeave(type === 'prd' ? 'prdDropZone' : 'srcDropZone');
+  if (type === 'prd') processPrdFileList(e.dataTransfer.files);
+  else processSrcFileList(e.dataTransfer.files);
+}
+
+// ───────────────────────────────────────── PRD file handling
+function handlePrdFiles(e)  { processPrdFileList(e.target.files); }
+function handleSrcFiles(e)  { processSrcFileList(e.target.files); }
+
+function processPrdFileList(files) {
+  for (const f of files) {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      appState.prdFiles.push({ name: f.name, size: f.size, content: ev.target.result });
+      renderPrdFileList();
+      checkStep1Valid();
+    };
+    reader.readAsText(f);
+  }
+}
+
+function renderPrdFileList() {
+  const container = document.getElementById('prdFileList');
+  if (!appState.prdFiles.length) { container.classList.add('hidden'); return; }
+  container.classList.remove('hidden');
+  container.innerHTML = appState.prdFiles.map((f, i) => `
+    <div class="file-chip flex items-center gap-3 bg-sentinel-surface border border-sentinel-border rounded-lg px-3 py-2">
+      <svg class="flex-shrink-0 text-sentinel-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span class="flex-1 text-sm text-white truncate">${esc(f.name)}</span>
+      <span class="text-xs text-sentinel-muted">${(f.size/1024).toFixed(1)} KB</span>
+      <button onclick="removePrdFile(${i})" class="text-sentinel-muted hover:text-sentinel-red transition text-xs">✕</button>
+    </div>`).join('');
+}
+
+function removePrdFile(i) {
+  appState.prdFiles.splice(i, 1);
+  renderPrdFileList();
+  checkStep1Valid();
+}
+
+function togglePrdPaste() {
+  const area = document.getElementById('prdPasteArea');
+  area.classList.toggle('hidden');
+}
+
+function syncPrdPaste() {
+  const text = document.getElementById('prdPasteText').value.trim();
+  // Mirror into workspace PRD textarea
+  document.getElementById('input-prd').value = text;
+  checkStep1Valid();
+}
+
+function checkStep1Valid() {
+  const hasFiles = appState.prdFiles.length > 0;
+  const hasText  = document.getElementById('prdPasteText').value.trim().length > 0;
+  document.getElementById('step1Next').disabled = !(hasFiles || hasText);
+}
+
+function loadWizardExample() {
+  appState.prdFiles = [{ name: 'SecureNotes-PRD.md', size: EXAMPLES.prd.length, content: EXAMPLES.prd }];
+  renderPrdFileList();
+  document.getElementById('prdPasteText').value = EXAMPLES.prd;
+  document.getElementById('prdPasteArea').classList.remove('hidden');
+  document.getElementById('input-prd').value = EXAMPLES.prd;
+  // Pre-select matching demo repo
+  selectRepo('r1');
+  checkStep1Valid();
+}
+
+// ───────────────────────────────────────── Source file handling
+function processSrcFileList(files) {
+  let combined = '';
+  let pending = files.length;
+  for (const f of files) {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      combined += `# ── ${f.name} ──\n${ev.target.result}\n\n`;
+      if (--pending === 0) {
+        document.getElementById('input-source_code').value = combined.trim();
+        switchTab('source_code');
+      }
+    };
+    reader.readAsText(f);
+  }
+}
+
+// ───────────────────────────────────────── Repo list
+function renderRepoList(repos) {
+  const container = document.getElementById('repoList');
+  container.innerHTML = repos.map(r => `
+    <div class="repo-card border border-sentinel-border rounded-xl p-4 flex items-start gap-4 ${appState.selectedRepo?.id === r.id ? 'selected' : ''}"
+         onclick="selectRepo('${r.id}')">
+      <div class="w-10 h-10 rounded-full bg-sentinel-card border border-sentinel-border flex items-center justify-center text-sm font-bold text-sentinel-muted flex-shrink-0 uppercase">
+        ${r.org[0]}
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs text-sentinel-muted">${esc(r.org)}</span>
+          <span class="text-sentinel-border">/</span>
+          <span class="text-sm font-semibold text-white">${esc(r.name)}</span>
+          ${appState.selectedRepo?.id === r.id ? '<svg class="text-sentinel-accent" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+        </div>
+        <p class="text-xs text-sentinel-muted mt-1 truncate">${esc(r.desc)}</p>
+        <div class="flex items-center gap-3 mt-2">
+          <span class="flex items-center gap-1 text-xs text-sentinel-muted">
+            <span class="w-2.5 h-2.5 rounded-full inline-block" style="background:${r.langColor}"></span>
+            ${r.lang}
+          </span>
+          <span class="text-xs text-sentinel-muted">Updated ${r.updated}</span>
+          <span class="flex items-center gap-1 text-xs text-sentinel-muted">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            ${r.stars}
+          </span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function filterRepos() {
+  const q = document.getElementById('repoSearch').value.toLowerCase();
+  const filtered = MOCK_REPOS.filter(r =>
+    r.name.toLowerCase().includes(q) || r.org.toLowerCase().includes(q) || r.desc.toLowerCase().includes(q)
+  );
+  renderRepoList(filtered);
+}
+
+function selectRepo(id) {
+  appState.selectedRepo = MOCK_REPOS.find(r => r.id === id) || null;
+  renderRepoList(MOCK_REPOS.filter(r => {
+    const q = document.getElementById('repoSearch').value.toLowerCase();
+    return r.name.toLowerCase().includes(q) || r.org.toLowerCase().includes(q);
+  }));
+  const branchRow = document.getElementById('branchRow');
+  if (appState.selectedRepo) {
+    branchRow.classList.remove('hidden');
+    branchRow.classList.add('flex');
+  } else {
+    branchRow.classList.add('hidden');
+    branchRow.classList.remove('flex');
+  }
+  document.getElementById('step2Next').disabled = !appState.selectedRepo;
+}
+
+document.addEventListener('change', e => {
+  if (e.target.id === 'branchSelect') {
+    appState.selectedBranch = e.target.value;
+  }
+});
+
+// ───────────────────────────────────────── Step 3 review
+function buildReviewSummary() {
+  // PRDs
+  const reviewPrds = document.getElementById('reviewPrds');
+  const prdItems = appState.prdFiles.length
+    ? appState.prdFiles.map(f => `
+        <div class="flex items-center gap-2 text-sm">
+          <svg class="text-sentinel-accent flex-shrink-0" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span class="text-white truncate">${esc(f.name)}</span>
+        </div>`).join('')
+    : '<div class="text-sm text-sentinel-muted">Pasted text</div>';
+  reviewPrds.innerHTML = prdItems;
+
+  // Repo
+  const repo = appState.selectedRepo;
+  document.getElementById('reviewRepo').innerHTML = repo ? `
+    <div class="text-sm font-semibold text-white">${esc(repo.org)}/${esc(repo.name)}</div>
+    <div class="flex items-center gap-1.5 mt-1">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8b949e" stroke-width="2"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 01-9 9"/></svg>
+      <span class="font-mono text-xs text-sentinel-accent">${esc(appState.selectedBranch)}</span>
+    </div>
+    <div class="mt-1.5 flex items-center gap-1 text-xs text-sentinel-muted">
+      <span class="w-2 h-2 rounded-full inline-block" style="background:${repo.langColor}"></span>
+      ${repo.lang}
+    </div>` : '<div class="text-sm text-sentinel-muted">—</div>';
+
+  // Copy tech spec from wizard textarea to workspace
+  const ts = document.getElementById('input-tech_spec').value;
+  document.getElementById('input-tech_spec-ws').value = ts;
+}
+
+function toggleTechSpec() {
+  const panel = document.getElementById('techSpecPanel');
+  const chevron = document.getElementById('techSpecChevron');
+  panel.classList.toggle('hidden');
+  chevron.style.transform = panel.classList.contains('hidden') ? '' : 'rotate(180deg)';
+}
+
+function updateModeUI() {
+  const val = document.querySelector('input[name="pipelineMode"]:checked')?.value || 'demo';
+  appState.pipelineMode = val;
+  document.getElementById('modeDemoLabel').className = `mode-option flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition ${val==='demo' ? 'border-sentinel-accent bg-sentinel-accent/5' : 'border-sentinel-border hover:border-sentinel-accent/40'}`;
+  document.getElementById('modeLiveLabel').className = `mode-option flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition ${val==='live' ? 'border-sentinel-accent bg-sentinel-accent/5' : 'border-sentinel-border hover:border-sentinel-accent/40'}`;
+}
+
+// ───────────────────────────────────────── Launch
+function launchPipeline() {
+  const repo   = appState.selectedRepo;
+  const branch = appState.selectedBranch;
+
+  // Merge prd file contents into the workspace textarea
+  if (appState.prdFiles.length) {
+    const merged = appState.prdFiles.map(f => f.content).join('\n\n---\n\n');
+    document.getElementById('input-prd').value = merged;
+  }
+
+  // Load source code example if field is empty
+  if (!document.getElementById('input-source_code').value.trim()) {
+    document.getElementById('input-source_code').value = EXAMPLES.source_code;
+  }
+
+  // Update nav + banner
+  if (repo) {
+    document.getElementById('navBreadcrumb').classList.remove('hidden');
+    document.getElementById('navBreadcrumb').classList.add('flex');
+    document.getElementById('navRepo').textContent   = `${repo.org}/${repo.name}`;
+    document.getElementById('navBranch').textContent = branch;
+    document.getElementById('navPrdCount').textContent =
+      appState.prdFiles.length ? `${appState.prdFiles.length} PRD${appState.prdFiles.length>1?'s':''}` : '1 PRD';
+
+    document.getElementById('bannerRepo').textContent   = `${repo.org}/${repo.name}`;
+    document.getElementById('bannerBranch').textContent = branch;
+    document.getElementById('bannerPrdNames').textContent =
+      appState.prdFiles.length
+        ? appState.prdFiles.map(f=>f.name).join(', ')
+        : 'Pasted PRD';
+  }
+
+  showScreen('screenWorkspace');
+  runAnalysis(appState.pipelineMode === 'demo');
+}
+
+// ───────────────────────────────────────── Workspace tab switching
+function switchTab(tab) {
+  ['prd','tech_spec','source_code'].forEach(t => {
+    document.getElementById(`panel-${t}`).classList.toggle('hidden', t !== tab);
+    const btn = document.querySelector(`[data-tab="${t}"]`);
+    if (btn) btn.className = `px-4 py-2 transition ${t === tab ? 'tab-active' : 'tab-inactive'}`;
+  });
+  appState.activeInputTab = tab;
+}
+
+function switchResultTab(tab) {
+  ['overview','schema','logic','tests'].forEach(t => {
+    document.getElementById(`rtab-${t}`).classList.toggle('hidden', t !== tab);
+    const btn = document.querySelector(`[data-rtab="${t}"]`);
+    if (btn) btn.className = `px-4 py-2 transition ${t === tab ? 'tab-active' : 'tab-inactive'}`;
+  });
+  appState.activeResultTab = tab;
+}
+
+function loadExample(tab) {
+  const key = tab === 'tech_spec' ? 'tech_spec' : tab;
+  const el  = tab === 'tech_spec' ? 'input-tech_spec-ws' : `input-${tab}`;
+  document.getElementById(el).value = EXAMPLES[key] || '';
+  switchTab(tab);
+}
+
+// ───────────────────────────────────────── Pipeline runner
+function setProgress(pct, label) {
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressPct').textContent = pct + '%';
+  document.getElementById('progressLabel').textContent = label;
+}
+
+function setStepStatus(step, status) {
+  const el   = document.getElementById(`step-${step}-status`);
+  const card = document.getElementById(`step-${step}`);
+  if (status === 'running') {
+    el.innerHTML = '<span class="pulse-dot text-sentinel-accent">● Running</span>';
+    card.classList.add('border-sentinel-accent/50');
+  } else if (status === 'done') {
+    el.innerHTML = '<span class="text-sentinel-green">✓ Done</span>';
+    card.classList.remove('border-sentinel-accent/50');
+    card.classList.add('border-sentinel-green/40');
+  } else {
+    el.innerHTML = '<span class="text-sentinel-red">✗ Error</span>';
+  }
+}
+
+async function runAnalysis(mock) {
+  const prd         = document.getElementById('input-prd').value.trim();
+  const tech_spec   = document.getElementById('input-tech_spec-ws')?.value.trim() || document.getElementById('input-tech_spec')?.value.trim() || '';
+  const source_code = document.getElementById('input-source_code').value.trim();
+
+  if (!mock && !prd && !source_code) {
+    alert('Please paste a PRD and source code (or load the example) before running.');
+    return;
+  }
+
+  // Reset UI
+  document.getElementById('emptyState').classList.add('hidden');
+  document.getElementById('pipelineProgress').classList.remove('hidden');
+  document.getElementById('resultsTabs').classList.add('hidden');
+  ['1','2','3'].forEach(s => {
+    const el = document.getElementById(`step-${s}-status`);
+    el.textContent = 'Waiting…';
+    el.className = 'mt-2 text-xs text-sentinel-muted';
+    document.getElementById(`step-${s}`).className =
+      'step-card bg-sentinel-surface border border-sentinel-border rounded-xl p-4 text-center';
+  });
+  setProgress(0, 'Initialising pipeline…');
+  document.getElementById('btnMock').disabled = true;
+  document.getElementById('btnReal').disabled = true;
+
+  const url = mock ? '/api/analyze/mock' : '/api/analyze';
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prd, technical_spec: tech_spec, source_code }),
+    });
+    if (!resp.ok) {
+      const err = await resp.json();
+      alert('Server error: ' + (err.error || resp.statusText));
+      return;
+    }
+    const reader  = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n\n');
+      buffer = lines.pop();
+      for (const chunk of lines) {
+        const line = chunk.replace(/^data: /, '').trim();
+        if (!line) continue;
+        try { handleSSE(JSON.parse(line)); } catch {}
+      }
+    }
+  } catch (err) {
+    alert('Connection error: ' + err.message);
+  } finally {
+    document.getElementById('btnMock').disabled = false;
+    document.getElementById('btnReal').disabled = false;
+  }
+}
+
+// ───────────────────────────────────────── SSE handler
+function handleSSE(msg) {
+  const pct = { 1:10, 2:40, 3:75 };
+  switch (msg.event) {
+    case 'step_start':
+      setProgress(pct[msg.step] || 0, msg.label);
+      setStepStatus(msg.step, 'running');
+      break;
+    case 'step_done':
+      setStepStatus(msg.step, 'done');
+      if (msg.agent === 'ContextCartographer') { appState.truthSchema = msg.payload; renderSchema(msg.payload); }
+      else if (msg.agent === 'LogicTranslator')     { appState.logicTree   = msg.payload; renderLogic(msg.payload); }
+      else if (msg.agent === 'AdversarialAuditor')  { appState.assessment  = msg.payload; renderOverview(msg.payload); setProgress(95, 'Generating test cases…'); }
+      break;
+    case 'test_cases':
+      appState.testCases = msg.test_cases;
+      renderTests(msg.test_cases);
+      document.getElementById('testBadge').textContent = msg.test_cases.length;
+      document.getElementById('testBadge').classList.remove('hidden');
+      setProgress(100, 'Pipeline complete.');
+      document.getElementById('resultsTabs').classList.remove('hidden');
+      switchResultTab('overview');
+      break;
+    case 'error': alert('Pipeline error: ' + msg.message); break;
+    case 'done':  setProgress(100, 'Pipeline complete.'); break;
+  }
+}
+
+// ───────────────────────────────────────── Renderers
+function statusBadge(s) {
+  const m = { Met:'bg-sentinel-green/10 text-sentinel-green', Failed:'bg-sentinel-red/10 text-sentinel-red', Partial:'bg-sentinel-yellow/10 text-sentinel-yellow' };
+  return `<span class="badge ${m[s]||''}">${s}</span>`;
+}
+function severityBadge(s) {
+  const m = { critical:'bg-red-900/30 text-red-400', high:'bg-orange-900/20 text-orange-400', medium:'bg-yellow-900/20 text-yellow-400', low:'bg-sentinel-surface text-sentinel-muted' };
+  return `<span class="badge ${m[s]||''}">${s}</span>`;
+}
+
+function renderOverview(a) {
+  const score = a.compliance_score ?? 0;
+  const color = score>=70 ? '#3fb950' : score>=40 ? '#d29922' : '#f85149';
+  const arc   = document.getElementById('scoreArc');
+  arc.style.stroke = color;
+  arc.setAttribute('stroke-dasharray', `${score} 100`);
+  document.getElementById('scoreNum').textContent = score;
+  a.hard_block ? document.getElementById('hardBlockBanner').classList.remove('hidden') : document.getElementById('hardBlockBanner').classList.add('hidden');
+  document.getElementById('summaryText').textContent = a.summary || '–';
+  const tbody = document.getElementById('reqTableBody');
+  if (a.requirement_status?.length) {
+    tbody.innerHTML = a.requirement_status.map(r => `
+      <tr class="border-t border-sentinel-border hover:bg-white/[.02] transition">
+        <td class="px-4 py-2.5 font-mono text-xs text-sentinel-muted">${r.req_id}</td>
+        <td class="px-4 py-2.5">${statusBadge(r.status)}</td>
+        <td class="px-4 py-2.5 text-xs text-sentinel-muted">${esc(r.rationale)}</td>
+      </tr>`).join('');
+  }
+  const tl = document.getElementById('tensionList');
+  tl.innerHTML = a.tension_report?.length
+    ? a.tension_report.map(t => `
+        <div class="px-4 py-3 space-y-1">
+          <div class="text-sm font-medium text-white">${esc(t.description)}</div>
+          <div class="text-xs text-sentinel-muted">
+            <span class="text-sentinel-accent">Product:</span> ${esc(t.product_impact)}
+            &nbsp;·&nbsp;
+            <span class="text-sentinel-red">Safety:</span> ${esc(t.safety_impact)}
+          </div>
+        </div>`).join('')
+    : '<div class="px-4 py-4 text-sm text-sentinel-muted">No tensions identified.</div>';
+  document.getElementById('goldenPath').textContent = a.golden_path || '–';
+}
+
+function renderSchema(s) {
+  document.getElementById('constraintList').innerHTML = (s.constraints||[]).map(c => `
+    <div class="px-4 py-3 flex items-start gap-3">
+      <span class="badge mt-0.5 ${c.type==='hard'?'bg-sentinel-red/10 text-sentinel-red':'bg-sentinel-yellow/10 text-sentinel-yellow'}">${c.type}</span>
+      <div>
+        <div class="text-xs font-mono text-sentinel-muted">${c.id}</div>
+        <div class="text-sm text-white">${esc(c.description)}</div>
+        ${c.metric ? `<div class="text-xs text-sentinel-muted mt-0.5 font-mono">${esc(c.metric)}</div>` : ''}
+      </div>
+    </div>`).join('') || '<div class="px-4 py-4 text-sm text-sentinel-muted">None</div>';
+
+  document.getElementById('goalList').innerHTML = (s.product_goals||[]).map(g => `
+    <div class="px-4 py-3 flex items-start gap-3">
+      <span class="badge mt-0.5 ${g.priority==='P0'?'bg-sentinel-accent/10 text-sentinel-accent':'bg-sentinel-surface text-sentinel-muted border border-sentinel-border'}">${g.priority}</span>
+      <div>
+        <div class="text-xs font-mono text-sentinel-muted">${g.id}</div>
+        <div class="text-sm text-white">${esc(g.description)}</div>
+      </div>
+    </div>`).join('') || '<div class="px-4 py-4 text-sm text-sentinel-muted">None</div>';
+
+  const mi = s.missing_info || [];
+  if (mi.length) {
+    document.getElementById('missingInfoCard').classList.remove('hidden');
+    document.getElementById('missingInfoList').innerHTML = mi.map(m=>`<li>${esc(m)}</li>`).join('');
+  }
+}
+
+function renderLogic(t) {
+  document.getElementById('primaryIntent').textContent = t.primary_intent || '–';
+  document.getElementById('execPath').innerHTML = (t.execution_path||[]).map((s,i)=>`
+    <li class="flex gap-2">
+      <span class="flex-shrink-0 w-5 h-5 rounded-full bg-sentinel-accent/10 text-sentinel-accent text-xs flex items-center justify-center font-bold">${i+1}</span>
+      <span class="text-white">${esc(s)}</span>
+    </li>`).join('');
+  document.getElementById('entryPoints').innerHTML  = (t.entry_points||[]).map(p=>`<li class="font-mono text-xs">→ ${esc(p)}</li>`).join('') || '<li class="text-sentinel-muted text-xs">None</li>';
+  document.getElementById('exitPoints').innerHTML   = (t.exit_points||[]).map(p=>`<li class="font-mono text-xs">← ${esc(p)}</li>`).join('') || '<li class="text-sentinel-muted text-xs">None</li>';
+  document.getElementById('vulnList').innerHTML     = (t.data_vulnerabilities||[]).map(v=>`<li class="flex gap-2"><span class="text-sentinel-red flex-shrink-0">⚠</span><span>${esc(v)}</span></li>`).join('') || '<li class="text-sentinel-muted">No vulnerabilities detected.</li>';
+  document.getElementById('depList').innerHTML      = (t.dependencies||[]).map(d=>`<li class="font-mono text-xs text-sentinel-muted">${esc(d)}</li>`).join('') || '<li class="text-sentinel-muted text-xs">None</li>';
+}
+
+// ═══════════════════════════════════════════ TESTS TAB ═══════════════════
+
+// ── Status helpers ───────────────────────────────────────────────────────
+const STATUS_META = {
+  pending:     { label:'Pending',     color:'text-sentinel-muted',  bg:'bg-sentinel-surface',     border:'border-sentinel-border',      dot:'#8b949e' },
+  in_progress: { label:'In Progress', color:'text-sentinel-yellow', bg:'bg-sentinel-yellow/5',    border:'border-sentinel-yellow/30',   dot:'#d29922' },
+  passed:      { label:'Passed',      color:'text-sentinel-green',  bg:'bg-sentinel-green/5',     border:'border-sentinel-green/30',    dot:'#3fb950' },
+  failed:      { label:'Failed',      color:'text-sentinel-red',    bg:'bg-sentinel-red/5',       border:'border-sentinel-red/30',      dot:'#f85149' },
+  blocked:     { label:'Blocked',     color:'text-orange-400',      bg:'bg-orange-900/10',        border:'border-orange-400/30',        dot:'#fb923c' },
+};
+function statusPill(st) {
+  const m = STATUS_META[st] || STATUS_META.pending;
+  return `<span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full border ${m.bg} ${m.border} ${m.color}">
+    <span class="w-1.5 h-1.5 rounded-full inline-block flex-shrink-0" style="background:${m.dot}"></span>${m.label}
+  </span>`;
+}
+
+// ── Filter state ─────────────────────────────────────────────────────────
+appState.activeStatusFilter = 'all';
+
+function renderTests(cases) {
+  appState.testCases = cases;
+  renderTestStatsBar();
+  _renderFilteredTests();
+}
+
+function renderTestStatsBar() {
+  const counts = { pending:0, in_progress:0, passed:0, failed:0, blocked:0 };
+  appState.testCases.forEach(tc => { if (counts[tc.status] !== undefined) counts[tc.status]++; });
+  const total = appState.testCases.length;
+  const items = [
+    { label:'Total',       val: total,                   color:'text-white' },
+    { label:'Pending',     val: counts.pending,          color:'text-sentinel-muted' },
+    { label:'In Progress', val: counts.in_progress,      color:'text-sentinel-yellow' },
+    { label:'Passed',      val: counts.passed,           color:'text-sentinel-green' },
+    { label:'Failed',      val: counts.failed + counts.blocked, color:'text-sentinel-red' },
+  ];
+  document.getElementById('testStatsBar').innerHTML = items.map(it => `
+    <div class="bg-sentinel-surface border border-sentinel-border rounded-lg py-2">
+      <div class="text-lg font-bold ${it.color}">${it.val}</div>
+      <div class="text-sentinel-muted text-xs mt-0.5">${it.label}</div>
+    </div>`).join('');
+}
+
+function _renderFilteredTests() {
+  const search  = (document.getElementById('testSearch')?.value||'').toLowerCase();
+  const stFilter= appState.activeStatusFilter;
+  const filtered= appState.testCases.filter(tc =>
+    (stFilter==='all' || tc.status === stFilter) &&
+    (!search || tc.title.toLowerCase().includes(search) ||
+               tc.description.toLowerCase().includes(search) ||
+               tc.id.toLowerCase().includes(search))
+  );
+  const container = document.getElementById('testList');
+  if (!filtered.length) {
+    container.innerHTML = '<div class="text-center text-sentinel-muted text-sm py-10">No matching test cases.</div>';
+    return;
+  }
+  container.innerHTML = filtered.map(tc => renderTestCard(tc)).join('');
+}
+
+function renderTestCard(tc) {
+  const isExpanded = appState.expandedTests?.has(tc.id);
+  const commentCount = (tc.comments||[]).length;
+  const linkedReqs = (tc.linked_reqs||[]).map(r =>
+    `<span class="font-mono text-xs bg-sentinel-accent/10 text-sentinel-accent px-1.5 py-0.5 rounded">${esc(r)}</span>`
+  ).join('');
+
+  return `
+  <div id="tc-card-${tc.id}" class="fade-in bg-sentinel-surface border border-sentinel-border rounded-xl overflow-hidden transition-all">
+
+    <!-- ── Header ── -->
+    <div class="px-4 py-3 flex items-start gap-3 cursor-pointer hover:bg-white/[.015] transition"
+         onclick="toggleCard('${tc.id}')">
+      <div class="flex-1 min-w-0 space-y-1.5">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="font-mono text-xs text-sentinel-muted flex-shrink-0">${tc.id}</span>
+          ${severityBadge(tc.severity)}
+          ${statusPill(tc.status)}
+          ${linkedReqs}
+        </div>
+        <div class="text-sm font-semibold text-white">${esc(tc.title)}</div>
+        <div class="text-xs text-sentinel-muted leading-relaxed line-clamp-2">${esc(tc.description)}</div>
+      </div>
+      <div class="flex items-center gap-3 flex-shrink-0 mt-0.5">
+        ${commentCount ? `<span class="flex items-center gap-1 text-xs text-sentinel-muted"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>${commentCount}</span>` : ''}
+        <svg class="text-sentinel-muted transition-transform ${isExpanded ? 'rotate-180' : ''}" id="chevron-${tc.id}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+    </div>
+
+    <!-- ── Expanded body ── -->
+    <div id="tc-body-${tc.id}" class="${isExpanded ? '' : 'hidden'} border-t border-sentinel-border">
+
+      <!-- Sub-tabs -->
+      <div class="flex border-b border-sentinel-border text-xs font-medium bg-black/10">
+        <button onclick="switchTcTab('${tc.id}','stub')"    class="tc-tab px-4 py-2 border-b-2 border-sentinel-accent text-sentinel-accent" data-tc="${tc.id}" data-tab="stub">Test Stub</button>
+        <button onclick="switchTcTab('${tc.id}','fix')"     class="tc-tab px-4 py-2 border-b-2 border-transparent text-sentinel-muted hover:text-white transition" data-tc="${tc.id}" data-tab="fix">Code Fix</button>
+        <button onclick="switchTcTab('${tc.id}','criteria')"class="tc-tab px-4 py-2 border-b-2 border-transparent text-sentinel-muted hover:text-white transition" data-tc="${tc.id}" data-tab="criteria">Acceptance</button>
+        <button onclick="switchTcTab('${tc.id}','thread')"  class="tc-tab px-4 py-2 border-b-2 border-transparent text-sentinel-muted hover:text-white transition" data-tc="${tc.id}" data-tab="thread">
+          Discussion ${commentCount ? `<span class="ml-1 badge bg-sentinel-accent/10 text-sentinel-accent">${commentCount}</span>` : ''}
+        </button>
+        <button onclick="switchTcTab('${tc.id}','history')" class="tc-tab px-4 py-2 border-b-2 border-transparent text-sentinel-muted hover:text-white transition" data-tc="${tc.id}" data-tab="history">History</button>
+      </div>
+
+      <!-- ── Tab: Test Stub ── -->
+      <div id="tc-${tc.id}-stub" class="tc-panel">
+        <div class="flex items-center justify-between px-4 py-2 border-b border-sentinel-border bg-black/10">
+          <span class="text-xs text-sentinel-muted font-mono">pytest stub — edit &amp; save</span>
+          <div class="flex items-center gap-2">
+            <button onclick="copyCode('${tc.id}','stub')" class="text-xs text-sentinel-muted hover:text-white transition">Copy</button>
+            <button onclick="saveCode('${tc.id}','stub')" class="text-xs px-2.5 py-1 rounded bg-sentinel-accent/10 text-sentinel-accent border border-sentinel-accent/20 hover:bg-sentinel-accent/20 transition">Save</button>
+          </div>
+        </div>
+        <textarea id="tc-${tc.id}-stub-editor"
+          class="code-block w-full bg-transparent px-4 py-3 text-xs text-sentinel-muted focus:text-white focus:outline-none resize-none"
+          rows="10"
+          spellcheck="false"
+          onkeydown="handleEditorTab(event)"
+        >${esc(tc.stub)}</textarea>
+        <div id="tc-${tc.id}-stub-saved" class="hidden px-4 pb-2 text-xs text-sentinel-green">✓ Saved</div>
+      </div>
+
+      <!-- ── Tab: Code Fix ── -->
+      <div id="tc-${tc.id}-fix" class="tc-panel hidden">
+        <div class="px-4 py-3 border-b border-sentinel-border bg-black/10 flex items-center justify-between">
+          <span class="text-xs font-semibold text-sentinel-muted uppercase tracking-wider">AI-generated code recommendation</span>
+          <div class="flex items-center gap-2">
+            <button onclick="copyCode('${tc.id}','code_recommendation')" class="text-xs text-sentinel-muted hover:text-white transition">Copy</button>
+            <button onclick="saveCode('${tc.id}','code_recommendation')" class="text-xs px-2.5 py-1 rounded bg-sentinel-accent/10 text-sentinel-accent border border-sentinel-accent/20 hover:bg-sentinel-accent/20 transition">Save edits</button>
+          </div>
+        </div>
+        <textarea id="tc-${tc.id}-fix-editor"
+          class="code-block w-full bg-transparent px-4 py-3 text-xs text-sentinel-green focus:outline-none resize-none"
+          rows="10"
+          spellcheck="false"
+          onkeydown="handleEditorTab(event)"
+        >${esc(tc.code_recommendation||'# No recommendation available')}</textarea>
+        <div id="tc-${tc.id}-fix-saved" class="hidden px-4 pb-2 text-xs text-sentinel-green">✓ Saved</div>
+      </div>
+
+      <!-- ── Tab: Acceptance Criteria ── -->
+      <div id="tc-${tc.id}-criteria" class="tc-panel hidden px-4 py-4 space-y-2">
+        <div class="text-xs text-sentinel-muted font-semibold uppercase tracking-wider mb-3">Definition of Done</div>
+        ${(tc.acceptance_criteria||[]).map((c,i) => `
+          <label class="flex items-start gap-3 cursor-pointer group">
+            <input type="checkbox" id="crit-${tc.id}-${i}"
+              class="mt-0.5 w-4 h-4 rounded accent-sentinel-green cursor-pointer"
+              onchange="toggleCriteria('${tc.id}',${i},this.checked)"
+              ${(appState.criteriaChecked?.[tc.id]?.[i]) ? 'checked' : ''}
+            />
+            <span class="text-sm text-sentinel-muted group-hover:text-white transition leading-snug">${esc(c)}</span>
+          </label>`).join('')}
+        <div id="crit-progress-${tc.id}" class="mt-3 text-xs text-sentinel-muted"></div>
+      </div>
+
+      <!-- ── Tab: Discussion ── -->
+      <div id="tc-${tc.id}-thread" class="tc-panel hidden">
+        <div class="px-4 py-3 space-y-3 max-h-56 overflow-y-auto" id="tc-${tc.id}-comments">
+          ${renderComments(tc)}
+        </div>
+        <div class="border-t border-sentinel-border px-4 py-3 space-y-2">
+          <div class="flex gap-2">
+            <input id="tc-${tc.id}-author" type="text" placeholder="Your name"
+              value="${esc(appState.engineerName||'')}"
+              oninput="appState.engineerName=this.value"
+              class="w-28 bg-sentinel-surface border border-sentinel-border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-sentinel-accent text-white placeholder-sentinel-muted flex-shrink-0"
+            />
+            <textarea id="tc-${tc.id}-comment-input" rows="2" placeholder="Leave a note, question, or code snippet…"
+              class="flex-1 bg-sentinel-surface border border-sentinel-border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-sentinel-accent text-white placeholder-sentinel-muted resize-none"
+              onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey))postComment('${tc.id}')"
+            ></textarea>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-sentinel-muted">⌘↵ to send</span>
+            <button onclick="postComment('${tc.id}')" class="text-xs px-3 py-1 rounded bg-sentinel-accent text-sentinel-bg font-semibold hover:bg-sentinel-accent/90 transition">Post</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Tab: History ── -->
+      <div id="tc-${tc.id}-history" class="tc-panel hidden px-4 py-3 space-y-2 max-h-48 overflow-y-auto">
+        ${renderHistory(tc)}
+      </div>
+
+      <!-- ── Footer: status + assignee controls ── -->
+      <div class="border-t border-sentinel-border px-4 py-3 flex items-center gap-3 bg-black/10 flex-wrap">
+        <div class="flex items-center gap-2 flex-1 min-w-0">
+          <span class="text-xs text-sentinel-muted flex-shrink-0">Status:</span>
+          <select onchange="updateStatus('${tc.id}', this.value)"
+            class="bg-sentinel-surface border border-sentinel-border rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-sentinel-accent cursor-pointer">
+            ${Object.entries(STATUS_META).map(([k,v]) =>
+              `<option value="${k}" ${tc.status===k?'selected':''}>${v.label}</option>`
+            ).join('')}
+          </select>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-sentinel-muted flex-shrink-0">Assign:</span>
+          <input type="text" value="${esc(tc.assignee||'')}" placeholder="Engineer name"
+            onchange="updateAssignee('${tc.id}', this.value)"
+            class="w-32 bg-sentinel-surface border border-sentinel-border rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-sentinel-accent placeholder-sentinel-muted"
+          />
+        </div>
+        <div class="text-xs text-sentinel-muted ml-auto">Updated ${tc.updated_at ? tc.updated_at.replace('T',' ').replace('Z','') : '—'}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderComments(tc) {
+  const comments = tc.comments || [];
+  if (!comments.length) return '<div class="text-xs text-sentinel-muted py-2">No comments yet.</div>';
+  return comments.map(c => `
+    <div class="flex gap-2.5 fade-in">
+      <div class="w-7 h-7 rounded-full bg-sentinel-accent/15 border border-sentinel-accent/20 flex items-center justify-center text-xs font-bold text-sentinel-accent flex-shrink-0 uppercase">
+        ${(c.author||'?')[0]}
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 mb-0.5">
+          <span class="text-xs font-semibold text-white">${esc(c.author||'Engineer')}</span>
+          <span class="text-xs text-sentinel-muted">${c.ts ? c.ts.replace('T',' ').replace('Z','') : ''}</span>
+        </div>
+        <div class="text-xs text-sentinel-muted whitespace-pre-wrap leading-relaxed">${esc(c.text)}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderHistory(tc) {
+  const history = tc.history || [];
+  if (!history.length) return '<div class="text-xs text-sentinel-muted py-2">No changes recorded yet.</div>';
+  return [...history].reverse().map(h => `
+    <div class="flex items-start gap-2 text-xs">
+      <span class="text-sentinel-muted flex-shrink-0 font-mono">${(h.ts||'').replace('T',' ').replace('Z','')}</span>
+      <span class="text-sentinel-muted">·</span>
+      <span class="text-sentinel-accent font-mono">${esc(h.field)}</span>
+      <span class="text-sentinel-muted">changed from</span>
+      <span class="text-white font-mono">${esc(h.old)}</span>
+      <span class="text-sentinel-muted">→</span>
+      <span class="text-white font-mono">${esc(h.new)}</span>
+    </div>`).join('');
+}
+
+// ── Expand / collapse ────────────────────────────────────────────────────
+function toggleCard(id) {
+  if (!appState.expandedTests) appState.expandedTests = new Set();
+  const body    = document.getElementById(`tc-body-${id}`);
+  const chevron = document.getElementById(`chevron-${id}`);
+  const open    = body.classList.toggle('hidden');   // toggle returns new state
+  chevron.style.transform = open ? '' : 'rotate(180deg)';
+  if (!open) appState.expandedTests.add(id); else appState.expandedTests.delete(id);
+}
+
+// ── Sub-tab switching ────────────────────────────────────────────────────
+function switchTcTab(tcId, tab) {
+  const tabs = ['stub','fix','criteria','thread','history'];
+  tabs.forEach(t => {
+    document.getElementById(`tc-${tcId}-${t}`)?.classList.toggle('hidden', t !== tab);
+    document.querySelector(`.tc-tab[data-tc="${tcId}"][data-tab="${t}"]`)?.classList.remove('border-sentinel-accent','text-sentinel-accent');
+    document.querySelector(`.tc-tab[data-tc="${tcId}"][data-tab="${t}"]`)?.classList.add('border-transparent','text-sentinel-muted');
+  });
+  const active = document.querySelector(`.tc-tab[data-tc="${tcId}"][data-tab="${tab}"]`);
+  if (active) {
+    active.classList.remove('border-transparent','text-sentinel-muted');
+    active.classList.add('border-sentinel-accent','text-sentinel-accent');
+  }
+  if (tab === 'criteria') updateCriteriaProgress(tcId);
+}
+
+// ── Acceptance criteria checkboxes ───────────────────────────────────────
+function toggleCriteria(tcId, idx, checked) {
+  if (!appState.criteriaChecked) appState.criteriaChecked = {};
+  if (!appState.criteriaChecked[tcId]) appState.criteriaChecked[tcId] = {};
+  appState.criteriaChecked[tcId][idx] = checked;
+  updateCriteriaProgress(tcId);
+}
+function updateCriteriaProgress(tcId) {
+  const tc = appState.testCases.find(t => t.id === tcId);
+  if (!tc) return;
+  const total   = (tc.acceptance_criteria||[]).length;
+  const checked = Object.values(appState.criteriaChecked?.[tcId]||{}).filter(Boolean).length;
+  const el      = document.getElementById(`crit-progress-${tcId}`);
+  if (el) {
+    const pct = total ? Math.round(checked/total*100) : 0;
+    el.innerHTML = `
+      <div class="flex items-center gap-2">
+        <div class="flex-1 h-1 bg-sentinel-border rounded-full overflow-hidden">
+          <div class="h-full bg-sentinel-green rounded-full transition-all" style="width:${pct}%"></div>
+        </div>
+        <span class="${pct===100?'text-sentinel-green':'text-sentinel-muted'}">${checked}/${total} criteria met</span>
+      </div>`;
+  }
+}
+
+// ── Editor helpers ───────────────────────────────────────────────────────
+function handleEditorTab(e) {
+  if (e.key !== 'Tab') return;
+  e.preventDefault();
+  const ta  = e.target;
+  const s   = ta.selectionStart;
+  const end = ta.selectionEnd;
+  ta.value  = ta.value.substring(0,s) + '    ' + ta.value.substring(end);
+  ta.selectionStart = ta.selectionEnd = s + 4;
+}
+
+function copyCode(tcId, field) {
+  const editorId = field === 'stub' ? `tc-${tcId}-stub-editor` : `tc-${tcId}-fix-editor`;
+  const el = document.getElementById(editorId);
+  if (el) navigator.clipboard.writeText(el.value);
+}
+
+async function saveCode(tcId, field) {
+  const editorId = field === 'stub' ? `tc-${tcId}-stub-editor` : `tc-${tcId}-fix-editor`;
+  const savedId  = field === 'stub' ? `tc-${tcId}-stub-saved` : `tc-${tcId}-fix-saved`;
+  const el       = document.getElementById(editorId);
+  if (!el) return;
+  const code = el.value;
+
+  // Update local state immediately
+  const tc = appState.testCases.find(t => t.id === tcId);
+  if (tc) tc[field] = code;
+
+  // Persist to server
+  try {
+    await fetch(`/api/tests/${tcId}/code`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ field, code }),
+    });
+  } catch {}
+
+  const saved = document.getElementById(savedId);
+  if (saved) {
+    saved.classList.remove('hidden');
+    setTimeout(() => saved.classList.add('hidden'), 2000);
+  }
+}
+
+// ── Status + assignee ────────────────────────────────────────────────────
+async function updateStatus(tcId, newStatus) {
+  const tc = appState.testCases.find(t => t.id === tcId);
+  if (!tc) return;
+  const oldStatus = tc.status;
+  tc.status = newStatus;
+  tc.updated_at = new Date().toISOString().replace('.000','');
+
+  // Add to local history
+  tc.history = tc.history || [];
+  tc.history.push({ ts: tc.updated_at, field:'status', old: oldStatus, new: newStatus });
+
+  // Re-render just the header portion without closing the card
+  const card = document.getElementById(`tc-card-${tcId}`);
+  if (card) {
+    const newCard = document.createElement('div');
+    newCard.innerHTML = renderTestCard(tc);
+    const newEl = newCard.firstElementChild;
+    // Preserve expanded state
+    if (appState.expandedTests?.has(tcId)) {
+      newEl.querySelector(`#tc-body-${tcId}`)?.classList.remove('hidden');
+      const chev = newEl.querySelector(`#chevron-${tcId}`);
+      if (chev) chev.style.transform = 'rotate(180deg)';
+    }
+    card.replaceWith(newEl);
+  }
+
+  renderTestStatsBar();
+
+  // Persist
+  try {
+    await fetch(`/api/tests/${tcId}/status`, {
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ status: newStatus }),
+    });
+  } catch {}
+}
+
+async function updateAssignee(tcId, name) {
+  const tc = appState.testCases.find(t => t.id === tcId);
+  if (tc) tc.assignee = name;
+  try {
+    await fetch(`/api/tests/${tcId}/status`, {
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ status: tc?.status || 'pending', assignee: name }),
+    });
+  } catch {}
+}
+
+// ── Comments ─────────────────────────────────────────────────────────────
+async function postComment(tcId) {
+  const input  = document.getElementById(`tc-${tcId}-comment-input`);
+  const author = document.getElementById(`tc-${tcId}-author`);
+  const text   = input?.value.trim();
+  if (!text) return;
+
+  const newComment = {
+    id:     Math.random().toString(36).slice(2,10),
+    author: author?.value.trim() || 'Engineer',
+    text,
+    ts:     new Date().toISOString().replace('.000',''),
+    edited: false,
+  };
+
+  const tc = appState.testCases.find(t => t.id === tcId);
+  if (tc) tc.comments = [...(tc.comments||[]), newComment];
+
+  // Re-render comment list in place
+  const container = document.getElementById(`tc-${tcId}-comments`);
+  if (container && tc) container.innerHTML = renderComments(tc);
+
+  // Update discussion tab badge
+  const threadBtn = document.querySelector(`.tc-tab[data-tc="${tcId}"][data-tab="thread"]`);
+  if (threadBtn && tc) {
+    const n = tc.comments.length;
+    threadBtn.innerHTML = `Discussion <span class="ml-1 badge bg-sentinel-accent/10 text-sentinel-accent">${n}</span>`;
+  }
+
+  // Update header comment count
+  _renderFilteredTests(); // simplest way to keep count in sync without a full re-render
+
+  if (input) input.value = '';
+
+  // Persist
+  try {
+    await fetch(`/api/tests/${tcId}/comments`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ text: newComment.text, author: newComment.author }),
+    });
+  } catch {}
+}
+
+// ── Filter controls ──────────────────────────────────────────────────────
+function filterTests() { _renderFilteredTests(); }
+
+
+function filterStatus(st) {
+  appState.activeStatusFilter = st;
+  document.querySelectorAll('.st-btn').forEach(b => {
+    const on = b.dataset.st === st;
+    b.className = `st-btn px-2.5 py-1 rounded-md text-xs font-medium transition ${
+      on ? 'bg-sentinel-accent/10 text-sentinel-accent border border-sentinel-accent/30'
+         : 'bg-sentinel-surface border border-sentinel-border text-sentinel-muted hover:border-sentinel-accent'}`;
+  });
+  _renderFilteredTests();
+}
+
+// ── Export ───────────────────────────────────────────────────────────────
+function exportTests() {
+  const lines = [
+    '"""',
+    'Auto-generated test stubs — The Code Sentinel',
+    'Fill in the TODOs before running with pytest.',
+    '"""',
+    'import pytest',
+    '',
+    ...appState.testCases.map(tc => {
+      const header = `# ${tc.id} | severity: ${tc.severity} | status: ${tc.status}`;
+      const crit   = (tc.acceptance_criteria||[]).map(c => `#   - ${c}`).join('\n');
+      return `${header}\n# Acceptance criteria:\n${crit}\n${tc.stub}\n`;
+    }),
+  ];
+  const blob = new Blob([lines.join('\n')], { type:'text/x-python' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href=url; a.download='sentinel_tests.py'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function esc(str) {
+  return String(str??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
